@@ -17,13 +17,14 @@ cd Amethyst
 
 | Đường dẫn | Nội dung |
 | --- | --- |
-| `AMETHYST.md` | Đặc tả theme: palette chính thức, quy tắc tương phản, mapping component |
 | `.config/` | Cấu hình ứng dụng, mirror từ `$HOME` (đang xây lại) |
 | `.config/kitty/` | Cấu hình Kitty — theme `amethyst` trong `themes/amethyst.conf` |
 
+> Đặc tả theme (`AMETHYST.md`) là tài liệu riêng tư — không nằm trong repo.
+
 ## Theme: Amethyst
 
-Palette gốc và quy tắc áp màu nằm trong [AMETHYST.md](AMETHYST.md). Tiến độ áp dụng theo component:
+Theme được đặc tả trong tài liệu nội bộ `AMETHYST.md` (không commit lên repo — xem `.gitignore`). Tiến độ áp dụng theo component:
 
 | Component | Trạng thái |
 | --- | --- |
@@ -39,4 +40,4 @@ Palette gốc và quy tắc áp màu nằm trong [AMETHYST.md](AMETHYST.md). Ti�
 - OS: Gentoo Linux (OpenRC)
 - Compositor: mangoWC
 - Terminal: kitty (font ComicShannsMono Nerd Font)
-- Theme: amethyst — xem [AMETHYST.md](AMETHYST.md)
+- Theme: amethyst (đặc tả nội bộ, không public)
