@@ -25,8 +25,8 @@ cd Amethyst
 
 | Component | Trạng thái |
 | --- | --- |
-| mangowc | ⏳ |
-| kitty | ⏳ |
+| mangowc | ✅ |
+| kitty | ✅ |
 | waybar | ⏳ |
 | rofi | ⏳ |
 | GTK / Qt | ⏳ |
