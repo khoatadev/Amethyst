@@ -62,8 +62,8 @@ selection-bg  #2E3134
 
 ## Trạng thái áp dụng
 
-- [ ] mangowc (`appearance.toml` + bar)
-- [ ] kitty
+- [x] mangowc (`appearance.toml` + bar)
+- [x] kitty
 - [ ] waybar
 - [ ] rofi
 - [ ] GTK / Qt
