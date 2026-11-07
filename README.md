@@ -1,6 +1,6 @@
-# Amethyst 💜
+# Amethyst
 
-> Dotfiles cho Gentoo Linux theo theme **amethyst (thạch anh tím)** — màu tím bản sắc Gentoo.
+> Dotfiles cho Gentoo Linux — theme **Graphite**: tối giản, nền than gần đen, một accent duy nhất.
 
 Repo mirror cấu trúc `$HOME` từ gốc repo: một file trong repo nằm đúng vị trí của nó trên máy — `.config/mango/appearance.toml` trong repo tương ứng `~/.config/mango/appearance.toml` trên hệ thống.
 
@@ -17,19 +17,17 @@ cd Amethyst
 
 | Đường dẫn | Nội dung |
 | --- | --- |
+| `THEME.md` | Đặc tả theme Graphite: palette, quy tắc tương phản, mapping component |
 | `.config/` | Cấu hình ứng dụng, mirror từ `$HOME` (đang xây lại) |
-| `.config/kitty/` | Cấu hình Kitty — theme `amethyst` trong `themes/amethyst.conf` |
 
-> Đặc tả theme (`AMETHYST.md`) là tài liệu riêng tư — không nằm trong repo.
+## Theme: Graphite
 
-## Theme: Amethyst
-
-Theme được đặc tả trong tài liệu nội bộ `AMETHYST.md` (không commit lên repo — xem `.gitignore`). Tiến độ áp dụng theo component:
+Đơn sắc + một accent — palette gốc và quy tắc áp màu nằm trong [THEME.md](THEME.md). Tiến độ áp dụng:
 
 | Component | Trạng thái |
 | --- | --- |
 | mangowc | ⏳ |
-| kitty | ✅ |
+| kitty | ⏳ |
 | waybar | ⏳ |
 | rofi | ⏳ |
 | GTK / Qt | ⏳ |
@@ -39,5 +37,5 @@ Theme được đặc tả trong tài liệu nội bộ `AMETHYST.md` (không co
 
 - OS: Gentoo Linux (OpenRC)
 - Compositor: mangoWC
-- Terminal: kitty (font ComicShannsMono Nerd Font)
-- Theme: amethyst (đặc tả nội bộ, không public)
+- Terminal: kitty
+- Theme: Graphite — xem [THEME.md](THEME.md)
