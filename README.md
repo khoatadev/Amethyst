@@ -17,12 +17,11 @@ cd Amethyst
 
 | Đường dẫn | Nội dung |
 | --- | --- |
-| `THEME.md` | Đặc tả theme Graphite: palette, quy tắc tương phản, mapping component |
 | `.config/` | Cấu hình ứng dụng, mirror từ `$HOME` (đang xây lại) |
 
 ## Theme: Graphite
 
-Đơn sắc + một accent — palette gốc và quy tắc áp màu nằm trong [THEME.md](THEME.md). Tiến độ áp dụng:
+Đơn sắc + một accent (xám xanh sương nhạt) — nền tối trung tính, tối dung lượng chi tiết. Tiến độ áp dụng:
 
 | Component | Trạng thái |
 | --- | --- |
@@ -38,4 +37,4 @@ cd Amethyst
 - OS: Gentoo Linux (OpenRC)
 - Compositor: mangoWC
 - Terminal: kitty
-- Theme: Graphite — xem [THEME.md](THEME.md)
+- Theme: Graphite (tối giản — đơn sắc + một accent)
