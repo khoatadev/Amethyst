@@ -1,0 +1,95 @@
+/* Graphite — rofi theme
+ * Đơn sắc + một accent, đồng bộ với mangoWC appearance.toml:
+ *   nền #101113 · viền #2e3134 · accent #93b1c6 · urgent #c98a8a
+ */
+
+* {
+	bg:      #101113F2;
+	bg-lift: #16181d;
+	bg-sel:  #93b1c61f;
+	border:  #2e3134;
+	fg:      #d7dade;
+	fg-dim:  #9aa0a6;
+	accent:  #93b1c6;
+	urgent:  #c98a8a;
+
+	font: "JetBrainsMono Nerd Font 11";
+}
+
+/* Khung ngoài: một hộp nổi, viền hairline, bo góc mềm */
+window {
+	width:            560px;
+	background-color: @bg;
+	border:           1px;
+	border-color:     @border;
+	border-radius:    12px;
+	padding:          24px;
+	children:         [ mainbox ];
+}
+
+mainbox {
+	children: [ inputbar, listview ];
+	spacing:  16px;
+}
+
+/* Ô nhập: pill nổi nhẹ so với nền, không viền */
+inputbar {
+	children:         [ prompt, entry ];
+	spacing:          12px;
+	background-color: @bg-lift;
+	border-radius:    10px;
+	padding:          14px 18px;
+}
+
+prompt {
+	text-color: @accent;
+}
+
+entry {
+	text-color: @fg;
+	placeholder: "";
+	placeholder-color: @fg-dim;
+	vertical-align: 0.5;
+}
+
+/* Danh sách: không scrollbar, không đường kẻ */
+listview {
+	lines:        7;
+	fixed-height: false;
+	spacing:      4px;
+	scrollbar:    false;
+}
+
+element {
+	padding:      10px 14px;
+	border-radius: 8px;
+	children:     [ element-text ];
+}
+
+element-text {
+	text-color:    @fg;
+	vertical-align: 0.5;
+}
+
+/* Hàng chọn: nền ám accent nhẹ + chữ accent — accent duy nhất của theme */
+element selected.normal {
+	background-color: @bg-sel;
+}
+element-text selected.normal {
+	text-color: @accent;
+}
+
+/* Cửa sổ urgent (mode window) */
+element-text selected.urgent {
+	text-color: @urgent;
+}
+
+/* Thông báo (-mesg): mờ, khiêm tốn */
+message {
+	padding:    0 14px;
+	margin:    0 0 12px 0;
+}
+textbox {
+	text-color: @fg-dim;
+	vertical-align: 0.5;
+}

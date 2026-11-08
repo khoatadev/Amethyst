@@ -28,7 +28,7 @@ cd Amethyst
 | mangowc | ✅ |
 | kitty | ✅ |
 | waybar | ⏳ |
-| rofi | ⏳ |
+| rofi | ✅ |
 | GTK / Qt | ⏳ |
 | wallpaper | ⏳ |
 
@@ -37,4 +37,5 @@ cd Amethyst
 - OS: Gentoo Linux (OpenRC)
 - Compositor: mangoWC
 - Terminal: kitty
+- Launcher: rofi (drun, fuzzy matching, không icon)
 - Theme: Graphite (tối giản — đơn sắc + một accent)

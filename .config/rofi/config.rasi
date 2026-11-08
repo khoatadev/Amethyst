@@ -1,0 +1,22 @@
+/* Launcher — tối giản, khớp theme Graphite */
+
+configuration {
+	/* Chế độ: Super+D mở drun; Shift+<-/-> chuyển mode */
+	modes: "drun,run,window";
+
+	/* Không icon app — chỉ tên, sạch */
+	show-icons: false;
+
+	/* Tìm kiếm mờ (tha lỗi typo) */
+	matching: "fuzzy";
+
+	/* Prompt là một glyph duy nhất cho từng mode */
+	display-drun: "";
+	display-run: "";
+	display-window: "";
+
+	/* drun chỉ hiện tên app, bỏ nhãn generic */
+	drun-display-format: "{name}";
+}
+
+@theme "graphite"
