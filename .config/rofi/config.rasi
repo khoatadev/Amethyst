@@ -1,22 +1,20 @@
-/* Launcher — tối giản, khớp theme Graphite */
+/* Launcher — chỉ dùng drun, đồng bộ phong cách Tokyo Night Moon */
 
 configuration {
-	/* Chế độ: Super+D mở drun; Shift+<-/-> chuyển mode */
-	modes: "drun,run,window";
+	/* Chỉ kích hoạt mode drun */
+	modes: "drun";
 
-	/* Không icon app — chỉ tên, sạch */
-	show-icons: false;
+	/* Hiển thị icon app */
+	show-icons: true;
 
-	/* Tìm kiếm mờ (tha lỗi typo) */
+	/* Tìm kiếm mờ (fuzzy matching) */
 	matching: "fuzzy";
 
-	/* Prompt là một glyph duy nhất cho từng mode */
+	/* Prompt biểu tượng tìm kiếm */
 	display-drun: "";
-	display-run: "";
-	display-window: "";
 
-	/* drun chỉ hiện tên app, bỏ nhãn generic */
+	/* drun chỉ hiển thị tên ứng dụng gọn gàng */
 	drun-display-format: "{name}";
 }
 
-@theme "graphite"
+@theme "tokyonight"
