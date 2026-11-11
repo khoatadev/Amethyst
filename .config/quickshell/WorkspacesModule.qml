@@ -2,18 +2,25 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-Column {
+Item {
     id: root
 
     Theme { id: theme }
 
-    spacing: 6
     width: parent.width
+    implicitHeight: capsule.height
 
     property var rawTags: []
     property var visibleTags: {
         let list = rawTags.filter(t => t.is_active || t.client_count > 0)
         return list.length > 0 ? list : [{ index: 1, is_active: true, client_count: 0 }]
+    }
+
+    property int activeIndex: {
+        for (let i = 0; i < visibleTags.length; i++) {
+            if (visibleTags[i].is_active) return i
+        }
+        return 0
     }
 
     // Persistent stream watcher for mangoWC tags
@@ -38,45 +45,96 @@ Column {
         id: tagDispatcher
     }
 
-    Repeater {
-        model: root.visibleTags
+    // Nền tối gộp chung hình viên thuốc (Capsule / Pill bo tròn hoàn hảo)
+    Rectangle {
+        id: capsule
+        width: 38
+        anchors.horizontalCenter: parent.horizontalCenter
 
+        readonly property int padding: 3
+        readonly property int itemSize: 32
+        readonly property int spacing: 4
+
+        height: padding * 2 + root.visibleTags.length * itemSize + Math.max(0, root.visibleTags.length - 1) * spacing
+        radius: width / 2
+        color: theme.bgDark
+
+        Behavior on height {
+            NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+        }
+
+        // Active Indicator trượt chuyển động mượt mà
         Rectangle {
-            id: tagBtn
-            width: 36
-            height: 36
-            radius: 8
+            id: activeIndicator
+            width: capsule.itemSize
+            height: capsule.itemSize
+            radius: width / 2
+            color: theme.accent
             anchors.horizontalCenter: parent.horizontalCenter
+            visible: root.activeIndex >= 0
 
-            readonly property bool isActive: modelData.is_active
-            readonly property bool hasClients: modelData.client_count > 0
+            y: capsule.padding + root.activeIndex * (capsule.itemSize + capsule.spacing)
 
-            color: {
-                if (tagBtn.isActive) return theme.accent
-                if (mouseArea.containsMouse) return theme.bgHover
-                return theme.bgDark
+            Behavior on y {
+                SpringAnimation {
+                    spring: 3.2
+                    damping: 0.3
+                    epsilon: 0.25
+                }
             }
+        }
 
-            Behavior on color {
-                ColorAnimation { duration: 150 }
-            }
+        // Danh sách các số workspace nằm nổi bên trên
+        Column {
+            id: itemsColumn
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: capsule.padding
+            spacing: capsule.spacing
 
-            Text {
-                anchors.centerIn: parent
-                text: modelData.index.toString()
-                font.family: theme.fontMono
-                font.pixelSize: 13
-                font.bold: true
-                color: tagBtn.isActive ? theme.bgDark : theme.fg
-            }
+            Repeater {
+                model: root.visibleTags
 
-            MouseArea {
-                id: mouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    tagDispatcher.exec(["mmsg", "dispatch", "view," + modelData.index + ",0"])
+                Item {
+                    id: tagItem
+                    width: capsule.itemSize
+                    height: capsule.itemSize
+
+                    readonly property bool isActive: modelData.is_active
+                    readonly property bool hasClients: modelData.client_count > 0
+
+                    // Hover highlight mờ nhẹ
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: width / 2
+                        color: theme.bgHover
+                        opacity: (mouseArea.containsMouse && !tagItem.isActive) ? 0.8 : 0.0
+                        Behavior on opacity {
+                            NumberAnimation { duration: 150 }
+                        }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: modelData.index.toString()
+                        font.family: theme.fontMono
+                        font.pixelSize: 13
+                        font.bold: true
+                        color: tagItem.isActive ? theme.bgDark : (tagItem.hasClients ? theme.fg : theme.fgMuted)
+
+                        Behavior on color {
+                            ColorAnimation { duration: 180 }
+                        }
+                    }
+
+                    MouseArea {
+                        id: mouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            tagDispatcher.exec(["mmsg", "dispatch", "view," + modelData.index + ",0"])
+                        }
+                    }
                 }
             }
         }
