@@ -57,19 +57,7 @@ Column {
                 return theme.bgDark
             }
 
-            border.color: {
-                if (tagBtn.isActive) return theme.accent
-                if (mouseArea.containsMouse) return theme.borderHover
-                if (tagBtn.hasClients) return theme.borderActive
-                return theme.border
-            }
-            border.width: 1
-
             Behavior on color {
-                ColorAnimation { duration: 150 }
-            }
-
-            Behavior on border.color {
                 ColorAnimation { duration: 150 }
             }
 

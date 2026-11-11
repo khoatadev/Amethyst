@@ -10,12 +10,9 @@ Rectangle {
     width: 40
     height: col.implicitHeight + 12
     radius: 10
-    color: mouseArea.containsMouse ? theme.bgCard : theme.bgDark
-    border.color: mouseArea.containsMouse ? theme.borderHover : theme.border
-    border.width: 1
+    color: mouseArea.containsMouse ? theme.bgHover : theme.bgDark
 
     Behavior on color { ColorAnimation { duration: 150 } }
-    Behavior on border.color { ColorAnimation { duration: 150 } }
 
     property int brightness: 75
 

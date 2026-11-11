@@ -10,8 +10,6 @@ Rectangle {
     height: col.implicitHeight + 14
     radius: 10
     color: theme.bgDark
-    border.color: theme.border
-    border.width: 1
 
     SystemClock {
         id: clock
