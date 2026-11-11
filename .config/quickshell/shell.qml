@@ -15,16 +15,18 @@ ShellRoot {
             left: true
         }
         implicitWidth: 50
-        color: "transparent"
+        color: theme.bg
 
-        // Nền thanh bar bo cong mềm mại 2 góc ngoài mép phải
+        // Subtle divider separating the vertical bar from desktop windows
         Rectangle {
-            anchors.fill: parent
-            color: theme.bg
-            topLeftRadius: 0
-            bottomLeftRadius: 0
-            topRightRadius: 18
-            bottomRightRadius: 18
+            anchors {
+                top: parent.top
+                bottom: parent.bottom
+                right: parent.right
+            }
+            width: 1
+            color: theme.border
+            z: 10
         }
 
         ColumnLayout {
