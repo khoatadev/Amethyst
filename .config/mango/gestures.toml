@@ -1,0 +1,15 @@
+# =====================================================================
+# Module: Cử chỉ touchpad (Gestures)
+# Cú pháp: "modifier+hướng+số_ngón_tay"
+# =====================================================================
+
+[gesturebind.default]
+
+"none+left+3" = "focusdir,left"
+"none+right+3" = "focusdir,right"
+"none+up+3" = "focusdir,up"
+"none+down+3" = "focusdir,down"
+"none+right+4" = "viewprev_have_client"
+"none+left+4" = "viewnext_have_client"
+"none+up+4" = "enteroverview"
+"none+down+4" = "leaveoverview"

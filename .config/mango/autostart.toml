@@ -1,0 +1,12 @@
+# =====================================================================
+# Module: Tự động khởi động (Autostart)
+# Các ứng dụng / daemon chạy một lần khi mango khởi động
+# =====================================================================
+
+[global]
+
+exec_once = [
+    "fcitx5 -d",
+    "quickshell",
+    "awww-daemon",
+]

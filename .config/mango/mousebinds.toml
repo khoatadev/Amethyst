@@ -1,0 +1,15 @@
+# =====================================================================
+# Module: Phím tắt chuột & con lăn (Mouse & Axis binds)
+# Lưu ý: btn_left và btn_right không thể bind không có modifier
+# =====================================================================
+
+[mousebind.default]
+
+"SUPER+btn_left" = "moveresize,curmove"
+"btn_middle" = "togglemaximizescreen,0"
+"SUPER+btn_right" = "moveresize,curresize"
+
+[axisbind.default]
+
+"SUPER+UP" = "viewtoleft_have_client"
+"SUPER+DOWN" = "viewtoright_have_client"
