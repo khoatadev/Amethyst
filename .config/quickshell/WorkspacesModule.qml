@@ -63,24 +63,47 @@ Item {
             NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
         }
 
-        // Active Indicator trượt chuyển động mượt mà
-        Rectangle {
-            id: activeIndicator
+        // Tọa độ mục tiêu cho Active Indicator
+        property int currentTargetY: padding + root.activeIndex * (itemSize + spacing)
+        property bool movingDown: true
+
+        onCurrentTargetYChanged: {
+            movingDown = currentTargetY >= indicator.topY
+        }
+
+        // Active Indicator với hiệu ứng Stretch & Contract (Cursor Trail kiểu Kitty)
+        Item {
+            id: indicator
             width: capsule.itemSize
-            height: capsule.itemSize
-            radius: width / 2
-            color: theme.accent
             anchors.horizontalCenter: parent.horizontalCenter
             visible: root.activeIndex >= 0
 
-            y: capsule.padding + root.activeIndex * (capsule.itemSize + capsule.spacing)
+            property real topY: capsule.currentTargetY
+            property real bottomY: capsule.currentTargetY + capsule.itemSize
 
-            Behavior on y {
-                SpringAnimation {
-                    spring: 3.2
-                    damping: 0.3
-                    epsilon: 0.25
+            Behavior on topY {
+                NumberAnimation {
+                    duration: capsule.movingDown ? 340 : 200
+                    easing.type: Easing.OutCubic
                 }
+            }
+
+            Behavior on bottomY {
+                NumberAnimation {
+                    duration: capsule.movingDown ? 200 : 340
+                    easing.type: Easing.OutCubic
+                }
+            }
+
+            y: topY
+            height: Math.max(capsule.itemSize, bottomY - topY)
+
+            // Khối màu viên thuốc co giãn đàn hồi
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: theme.accent
+                opacity: 0.95
             }
         }
 
