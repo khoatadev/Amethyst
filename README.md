@@ -13,6 +13,7 @@
 | **Terminal** | [kitty](https://sw.kovidgoyal.net/kitty/) | Terminal GPU-accelerated với font ligatures |
 | **App Launcher** | [rofi](https://github.com/davatorium/rofi) | Chế độ `drun` tối giản, tìm kiếm mờ (fuzzy search) |
 | **File Manager** | [yazi](https://github.com/sxyazi/yazi) | Trình quản lý file TUI siêu tốc |
+| **Status Bar** | [Quickshell](https://quickshell.outfoxxed.me/) | Thanh trạng thái QML hiện đại, mượt mà |
 | **Bảng màu (Palette)**| **Tokyo Night Moon** | Tông màu đêm dịu mắt, huyền bí |
 | **Font chữ** | `ComicShannsMono Nerd Font` | Font lập trình cá tính, hỗ trợ đầy đủ Nerd Font icons |
 
@@ -25,7 +26,7 @@
 | **mangoWC** | `.config/mango/` | ✅ Hoàn thành | Quản lý cửa sổ, hiệu ứng chuyển động, gaps & keybinds |
 | **kitty** | `.config/kitty/` | ✅ Hoàn thành | Theme Tokyo Night Moon, background opacity 0.90 |
 | **rofi** | `.config/rofi/` | ✅ Hoàn thành | Floating card ở trung tâm, chỉ bật `drun`, icon app |
-| **waybar** | `.config/waybar/` | ⏳ Đang làm | Thanh trạng thái |
+| **quickshell** | `.config/quickshell/` | ✅ Hoàn thành | Thanh trạng thái dọc mép trái (Workspaces, Pin, Âm thanh, Độ sáng, Đồng hồ) |
 | **GTK / Qt** | `.config/` | ⏳ Đang làm | Đồng bộ theme ứng dụng đồ họa |
 | **Wallpaper** | `assets/wallpapers/` | ⏳ Đang làm | Hình nền đồng bộ bảng màu |
 
@@ -51,7 +52,7 @@ Các phím tắt chính được cấu hình trong compositor mangoWC (`Mod = Su
 
 ### 1. Yêu cầu tiên quyết
 - **Font chữ:** Cài đặt font `ComicShannsMono Nerd Font`.
-- **Gói phần mềm:** `mango-bin` / `mangoWC`, `kitty`, `rofi` (hỗ trợ Wayland).
+- **Gói phần mềm:** `mango-bin` / `mangoWC`, `quickshell`, `kitty`, `rofi` (hỗ trợ Wayland), `brightnessctl`, `pipewire`, `wireplumber`.
 
 ### 2. Sao chép cấu hình
 
