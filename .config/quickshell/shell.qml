@@ -50,23 +50,13 @@ ShellRoot {
                 Layout.fillWidth: true
             }
 
-            // Khoảng trống giãn cách tự do đẩy các module điều khiển xuống đáy
+            // Khoảng trống giãn cách tự do đẩy module điều khiển xuống đáy
             Item {
                 Layout.fillHeight: true
             }
 
-            // 3. Module Độ sáng
-            BrightnessModule {
-                Layout.alignment: Qt.AlignHCenter
-            }
-
-            // 4. Module Âm thanh
-            AudioModule {
-                Layout.alignment: Qt.AlignHCenter
-            }
-
-            // 5. Module Pin
-            BatteryModule {
+            // 3. Cụm điều khiển hệ thống gộp chung (Độ sáng, Âm thanh, Pin & Power Profile)
+            ControlsCapsule {
                 Layout.alignment: Qt.AlignHCenter
             }
         }

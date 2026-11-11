@@ -52,7 +52,7 @@ Các phím tắt chính được cấu hình trong compositor mangoWC (`Mod = Su
 
 ### 1. Yêu cầu tiên quyết
 - **Font chữ:** Cài đặt font `ComicShannsMono Nerd Font`.
-- **Gói phần mềm:** `mango-bin` / `mangoWC`, `quickshell`, `kitty`, `rofi` (hỗ trợ Wayland), `brightnessctl`, `pipewire`, `wireplumber`.
+- **Gói phần mềm:** `mango-bin` / `mangoWC`, `quickshell`, `kitty`, `rofi` (hỗ trợ Wayland), `brightnessctl`, `pipewire`, `wireplumber`, `power-profiles-daemon`.
 
 ### 2. Sao chép cấu hình
 
