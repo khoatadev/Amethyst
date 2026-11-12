@@ -106,6 +106,7 @@ PanelWindow {
     }
 
     // Sắp xếp: đang kết nối lên đầu, rồi theo tín hiệu giảm dần
+    // Lưu ý: signalStrength của NM trả về thang 0.0–1.0
     property var sortedNetworks: []
 
     function refreshNetworks() {
@@ -185,29 +186,31 @@ PanelWindow {
 
     // =========================================================================
     // Icon sóng theo cường độ tín hiệu (Nerd Font)
+    // signalStrength của NetworkManager trả về thang 0.0–1.0
     // =========================================================================
     function signalIcon(strength) {
-        if (strength >= 80) return "󰤨";
-        if (strength >= 60) return "󰤥";
-        if (strength >= 40) return "󰤢";
-        if (strength >= 20) return "󰤟";
+        if (strength >= 0.80) return "󰤨";
+        if (strength >= 0.60) return "󰤥";
+        if (strength >= 0.40) return "󰤢";
+        if (strength >= 0.20) return "󰤟";
         return "󰤯";
     }
 
     // =========================================================================
-    // Đảo (Island) mọc từ mép trái màn hình, kế cạnh cụm Controls
-    // (không shadow — trông như mọc thẳng ra từ thân bar)
+    // Đảo (Island) mọc từ mép phải của bar (x = barWidth), kế cạnh cụm
+    // Controls — không shadow, nhìn như mọc thẳng ra từ thân bar
     // =========================================================================
     Item {
         id: islandRoot
-        // Căn giữa đảo vào Y tâm capsule; nếu chưa có anchorY thì giữa màn hình
-        anchors.left: parent.left
+        // Đảo bắt đầu ngay sau mép bar 54px, căn giữa theo Y tâm capsule
+        readonly property int barWidth: 54
+        x: barWidth
         y: root.anchorY > 0 ? root.anchorY - height / 2 : 0
         width: Math.max(0, root.islandW)
         height: Math.max(0, root.islandH)
 
         // Thân đảo: kéo dài sang trái thêm cornerRadius để hai góc trái
-        // bị giấu sau bar, chỉ còn hai góc phải được bo tròn
+        // hoà vào mép bar, chỉ còn hai góc phải được bo tròn
         Rectangle {
             id: island
             x: -root.cornerRadius
@@ -225,7 +228,7 @@ PanelWindow {
             id: filletTop
             readonly property real r: Math.min(root.filletRadius, root.islandW)
             visible: r > 0.5
-            x: 0
+            x: -islandRoot.barWidth
             y: -r
             width: r; height: r
             preferredRendererType: Shape.CurveRenderer
@@ -249,7 +252,7 @@ PanelWindow {
             id: filletBottom
             readonly property real r: Math.min(root.filletRadius, root.islandW)
             visible: r > 0.5
-            x: 0
+            x: -islandRoot.barWidth
             y: islandRoot.height
             width: r; height: r
             preferredRendererType: Shape.CurveRenderer

@@ -62,17 +62,17 @@ Rectangle {
     }
     Component.onCompleted: refreshWifiState()
 
-    // Cường độ sóng hiện tại (0 nếu không có network object)
-    readonly property int wifiSignal: currentNetwork ? Math.round(currentNetwork.signalStrength) : 0
+    // Cường độ sóng hiện tại (0.0–1.0 như NM trả về; 0 nếu không có network)
+    readonly property real wifiSignal: currentNetwork ? currentNetwork.signalStrength : 0
 
-    // Icon đổi theo trạng thái + mức sóng (Nerd Font)
+    // Icon đổi theo trạng thái + mức sóng (Nerd Font, sóng thang 0.0–1.0)
     function wifiIcon() {
         if (!Networking.wifiEnabled) return "󰤭";
         if (!root.wifiConnected) return "󰤭";
-        if (root.wifiSignal >= 80) return "󰤨";
-        if (root.wifiSignal >= 60) return "󰤥";
-        if (root.wifiSignal >= 40) return "󰤢";
-        if (root.wifiSignal >= 20) return "󰤟";
+        if (root.wifiSignal >= 0.80) return "󰤨";
+        if (root.wifiSignal >= 0.60) return "󰤥";
+        if (root.wifiSignal >= 0.40) return "󰤢";
+        if (root.wifiSignal >= 0.20) return "󰤟";
         return "󰤯";
     }
 
@@ -316,7 +316,7 @@ Rectangle {
 
             property real iconScale: 1.0
             property color ringColor: theme.accent
-            property real ringValue: root.wifiSignal / 100
+            property real ringValue: root.wifiSignal   // thang 0.0–1.0
 
             Rectangle {
                 anchors.fill: parent
