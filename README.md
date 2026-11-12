@@ -23,7 +23,7 @@
 
 | Thành phần | Thư mục cấu hình | Trạng thái | Ghi chú |
 | :--- | :--- | :---: | :--- |
-| **mangoWC** | `.config/mango/` | ✅ Hoàn thành | Quản lý cửa sổ, hiệu ứng chuyển động, gaps, keybinds & autostart |
+| **mangoWC** | `.config/mango/` | ✅ Hoàn thành | Quản lý cửa sổ, hiệu ứng chuyển động, gaps, keybinds, autostart & remap Caps Lock sang Escape |
 | **kitty** | `.config/kitty/` | ✅ Hoàn thành | Theme Tokyo Night Moon, background opacity 0.90 |
 | **rofi** | `.config/rofi/` | ✅ Hoàn thành | Floating card ở trung tâm, chỉ bật `drun`, icon app |
 | **quickshell** | `.config/quickshell/` | ✅ Hoàn thành | Thanh trạng thái dọc mép trái (Workspaces, Pin, Âm thanh, Độ sáng, Đồng hồ) |
@@ -45,6 +45,7 @@ Các phím tắt chính được cấu hình trong compositor mangoWC (`Mod = Su
 | `Super + P` | Chụp màn hình vùng chọn (`grim` + `slurp`) |
 | `Super + Shift + P` | Chụp toàn màn hình |
 | `Super + R` | Nạp lại cấu hình mangoWC (**Reload**) |
+| `Caps Lock` | Hoạt động như phím `Escape` (`caps:escape`), tiện lợi chuyển về Normal mode |
 
 ---
 
