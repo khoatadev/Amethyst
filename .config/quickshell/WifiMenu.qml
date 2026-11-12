@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Shapes
 import QtQuick.Controls
 import Quickshell
 import Quickshell.Wayland
@@ -35,7 +34,6 @@ PanelWindow {
     readonly property int listPadding: 8
     readonly property int menuWidth: 380
     readonly property int cornerRadius: 24     // bo hai góc phải
-    readonly property int filletRadius: 14     // góc lõm nối với mép bar
     // Nền đảo khớp màu bar (Tokyo Night) thay vì đen thuần
     readonly property color islandColor: theme ? theme.bgDark : "#1e2030"
     readonly property string fontFamily: theme ? theme.fontMono : "ComicShannsMono Nerd Font"
@@ -209,66 +207,18 @@ PanelWindow {
         width: Math.max(0, root.islandW)
         height: Math.max(0, root.islandH)
 
-        // Thân đảo: kéo dài sang trái thêm cornerRadius để hai góc trái
-        // hoà vào mép bar, chỉ còn hai góc phải được bo tròn
+        // Thân đảo: cạnh trái phẳng dính sát mép phải bar, chỉ bo 2 góc phải
+        // (không kéo dài sang trái — không đè lên capsule trong bar)
         Rectangle {
             id: island
-            x: -root.cornerRadius
+            x: 0
             y: 0
-            width: parent.width + root.cornerRadius
+            width: parent.width
             height: parent.height
-            radius: Math.min(root.cornerRadius, (parent.width + root.cornerRadius) / 2)
+            radius: root.cornerRadius
             color: root.islandColor
 
             MouseArea { anchors.fill: parent }
-        }
-
-        // Góc lõm trên: nối mềm thân đảo với mép bar
-        Shape {
-            id: filletTop
-            readonly property real r: Math.min(root.filletRadius, root.islandW)
-            visible: r > 0.5
-            x: -islandRoot.barWidth
-            y: -r
-            width: r; height: r
-            preferredRendererType: Shape.CurveRenderer
-            ShapePath {
-                strokeWidth: 0
-                strokeColor: "transparent"
-                fillColor: root.islandColor
-                startX: filletTop.r; startY: 0
-                PathLine { x: filletTop.r; y: filletTop.r }
-                PathLine { x: 0; y: filletTop.r }
-                PathArc {
-                    x: filletTop.r; y: 0
-                    radiusX: filletTop.r; radiusY: filletTop.r
-                    direction: PathArc.Clockwise
-                }
-            }
-        }
-
-        // Góc lõm dưới: nối mềm thân đảo với mép bar
-        Shape {
-            id: filletBottom
-            readonly property real r: Math.min(root.filletRadius, root.islandW)
-            visible: r > 0.5
-            x: -islandRoot.barWidth
-            y: islandRoot.height
-            width: r; height: r
-            preferredRendererType: Shape.CurveRenderer
-            ShapePath {
-                strokeWidth: 0
-                strokeColor: "transparent"
-                fillColor: root.islandColor
-                startX: 0; startY: 0
-                PathLine { x: filletBottom.r; y: 0 }
-                PathLine { x: filletBottom.r; y: filletBottom.r }
-                PathArc {
-                    x: 0; y: 0
-                    radiusX: filletBottom.r; radiusY: filletBottom.r
-                    direction: PathArc.Clockwise
-                }
-            }
         }
 
         // ---------------- Nội dung đảo ----------------
