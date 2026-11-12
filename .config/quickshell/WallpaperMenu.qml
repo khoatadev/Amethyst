@@ -10,11 +10,10 @@ import Quickshell.Io
 // - Đồng bộ aesthetic với AppLauncher: đảo đen bo góc trên, góc lõm nối mép
 //   dưới, spring nảy nhẹ khi mở, co gọn mượt khi đóng
 // - Gallery thumbnail bay vào vị trí kiểu staggered (mỗi ảnh trễ 45ms, nảy
-//   từ dưới lên bằng OutBack), hover thì phóng nhẹ + glow viền accent
-// - Chọn ảnh: thumbnail phóng to tràn màn hình từ đúng vị trí thumbnail
-//   ("bắt lấy" ảnh) đúng nhịp awww đổi wallpaper với --transition-type
-//   random: wave quét, grow nở tròn, wipe góc... mỗi lần chọn là một
-//   hiệu ứng mới
+//   từ dưới lên bằng OutBack), hover phóng nhẹ + glow viền accent; ảnh đang
+//   chọn to hơn hẳn + viền glow luôn hiện, và được cuộn vào giữa dải
+// - Chọn ảnh: awww đổi wallpaper NGAY với --transition-type random ở 120fps
+//   (mặc định 30fps) — transition bắt đầu từ đúng điểm click; menu đóng ngay
 // - Wallpaper đang dùng có chấm xanh pulse ở góc; tên file chạy chữ mono
 // =============================================================================
 
@@ -121,11 +120,13 @@ PanelWindow {
     }
 
     // =========================================================================
-    // Đổi wallpaper qua awww — transition ngẫu nhiên, xuất phát từ điểm chọn
+    // Đổi wallpaper qua awww — transition ngẫu nhiên 120fps, từ điểm chọn
     // =========================================================================
     function applyWallpaper(path, origin) {
+        // 120 fps (mặc định 30) để transition mượt không giật
         let cmd = "awww img '" + path + "' " +
                   "--transition-type random " +
+                  "--transition-fps 120 " +
                   "--transition-duration 1.2";
         if (origin) {
             cmd += " --transition-pos " + Math.round(origin.x) + "," + Math.round(origin.y);
@@ -134,33 +135,23 @@ PanelWindow {
         currentWallpaper = path;
     }
 
-    // Tìm delegate thumbnail theo index trong ListView
-    function findThumb(idx) {
-        for (let i = 0; i < strip.contentItem.children.length; i++) {
-            let c = strip.contentItem.children[i];
-            if (c.index === idx) return c;
-        }
-        return null;
-    }
-
+    // Click chọn wallpaper: awww chạy transition ngay lập tức rồi đóng menu
     function pickWallpaper(idx, origin) {
         if (wallpapers.length === 0) return;
         idx = ((idx % wallpapers.length) + wallpapers.length) % wallpapers.length;
         sel = idx;
-        // Rect thumbnail trong toạ độ cửa sổ: điểm xuất phát + tâm của cú bay
-        let thumbItem = findThumb(idx);
-        let from = thumbItem
-            ? thumbItem.mapToItem(root.contentItem, 0, 0)
-            : Qt.point(root.width / 2 - thumbWidth / 2, root.height / 2 - thumbHeight / 2);
-        fxFlyer.launch(wallpapers[idx].path, origin, from);
+        applyWallpaper(wallpapers[idx].path, origin);
+        close();
     }
 
     // Tâm của thumbnail đang chọn — dùng làm tâm transition awww khi gõ phím
     function wallpaperCenterPoint() {
-        let thumbItem = findThumb(sel);
-        if (thumbItem) {
-            return thumbItem.mapToItem(
-                root.contentItem, thumbItem.width / 2, thumbItem.height / 2);
+        for (let i = 0; i < strip.contentItem.children.length; i++) {
+            let c = strip.contentItem.children[i];
+            if (c.index === sel) {
+                return c.mapToItem(
+                    root.contentItem, c.width / 2, c.height / 2);
+            }
         }
         return Qt.point(root.width / 2, root.height / 2);
     }
@@ -185,114 +176,6 @@ PanelWindow {
     MouseArea {
         anchors.fill: parent
         onClicked: root.close()
-    }
-
-    // =========================================================================
-    // Hiệu ứng "bắt lấy ảnh": thumbnail phóng tràn màn hình rồi tan biến
-    // =========================================================================
-    Item {
-        id: fxLayer
-        anchors.fill: parent
-        z: 200
-        visible: fxFlyer.active
-
-        // Nền tối dần khi ảnh bay, tạo chiều sâu cho cú phóng
-        Rectangle {
-            id: fxDimmer
-            anchors.fill: parent
-            color: "#000000"
-            opacity: 0
-        }
-
-        // Ảnh bay: bay từ rect thumbnail → tràn màn hình → fade để lộ awww
-        Rectangle {
-            id: fxFlyer
-            property bool active: false
-            property string sourcePath: ""
-            property var origin: null
-
-            x: 0; y: 0
-            width: 0; height: 0
-            radius: 14
-            color: "transparent"
-            clip: true
-            visible: active
-            opacity: 1
-
-            Image {
-                id: flyerImg
-                anchors.fill: parent
-                fillMode: Image.PreserveAspectCrop
-                source: fxFlyer.sourcePath ? "file://" + fxFlyer.sourcePath : ""
-                mipmap: true
-            }
-
-            function launch(path, origin_, from_) {
-                sourcePath = path;
-                origin = origin_;
-                active = true;
-                // Bay từ vị trí & kích thước thumbnail → tràn màn hình
-                x = from_.x; y = from_.y;
-                width = root.thumbWidth; height = root.thumbHeight;
-                flyAnim.start();
-            }
-
-            SequentialAnimation {
-                id: flyAnim
-
-                // 1. Bay từ vị trí thumbnail → tràn màn hình + nền tối dần
-                ParallelAnimation {
-                    NumberAnimation {
-                        target: fxFlyer; property: "x"
-                        to: 0; duration: 640; easing.type: Easing.OutQuint
-                    }
-                    NumberAnimation {
-                        target: fxFlyer; property: "y"
-                        to: 0; duration: 640; easing.type: Easing.OutQuint
-                    }
-                    NumberAnimation {
-                        target: fxFlyer; property: "width"
-                        to: root.width; duration: 640; easing.type: Easing.OutQuint
-                    }
-                    NumberAnimation {
-                        target: fxFlyer; property: "height"
-                        to: root.height; duration: 640; easing.type: Easing.OutQuint
-                    }
-                    NumberAnimation {
-                        target: fxDimmer; property: "opacity"
-                        to: 0.55; duration: 420; easing.type: Easing.OutCubic
-                    }
-                }
-
-                // 2. Đã tràn màn hình → awww bắt đầu transition bên dưới lớp ảnh
-                ScriptAction {
-                    script: root.applyWallpaper(fxFlyer.sourcePath, fxFlyer.origin)
-                }
-
-                // 3. Ảnh tan biến, để lộ wallpaper mới (transition awww đã chạy)
-                ParallelAnimation {
-                    NumberAnimation {
-                        target: fxFlyer; property: "opacity"
-                        to: 0; duration: 500; easing.type: Easing.InOutCubic
-                    }
-                    NumberAnimation {
-                        target: fxDimmer; property: "opacity"
-                        to: 0; duration: 500; easing.type: Easing.InOutCubic
-                    }
-                }
-
-                // 4. Dọn dẹp + đóng menu
-                ScriptAction {
-                    script: {
-                        fxFlyer.active = false;
-                        fxFlyer.opacity = 1;
-                        fxFlyer.x = 0; fxFlyer.y = 0;
-                        fxFlyer.width = 0; fxFlyer.height = 0;
-                        root.close();
-                    }
-                }
-            }
-        }
     }
 
     // =========================================================================
@@ -442,7 +325,8 @@ PanelWindow {
                     anchors.bottomMargin: 8
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.margins: root.bodyPadding
+                    anchors.leftMargin: root.bodyPadding
+                    anchors.rightMargin: root.bodyPadding
                     clip: true
                     orientation: ListView.Horizontal
                     boundsBehavior: Flickable.StopAtBounds
@@ -451,10 +335,25 @@ PanelWindow {
                     spacing: root.thumbGap
                     model: root.wallpapers.length
 
+                    // Header/footer bằng nửa khoảng trống hiển thị: cả ảnh
+                    // đầu tiên lẫn ảnh cuối cùng đều cuộn được vào giữa dải
+                    header: Item {
+                        width: Math.max(0, (strip.width - root.thumbWidth) / 2)
+                        height: 1
+                        visible: false
+                    }
+                    footer: Item {
+                        width: Math.max(0, (strip.width - root.thumbWidth) / 2)
+                        height: 1
+                        visible: false
+                    }
+
                     // Cuộn mượt đưa ảnh được chọn vào giữa
+                    // (delegate index 0 nằm sau header → cộng thêm headerW)
                     function ensureCentered(idx) {
                         if (count === 0) return;
-                        let x = idx * (root.thumbWidth + root.thumbGap)
+                        let headerW = (width - root.thumbWidth) / 2;
+                        let x = headerW + idx * (root.thumbWidth + root.thumbGap)
                                 - width / 2 + root.thumbWidth / 2;
                         x = Math.max(0, Math.min(x, contentWidth - width));
                         if (contentWidth <= width) return;
@@ -510,8 +409,8 @@ PanelWindow {
                             onTriggered: thumb.shown = 1
                         }
 
-                        // Phóng nhẹ khi hover / khi được chọn bằng phím
-                        scale: 1 + hoverT * 0.05 + (isSel && !hoverHandler.hovered ? 0.03 : 0)
+                        // Ảnh đang chọn to hơn hẳn một chút, hover phóng nhẹ thêm
+                        scale: 1 + hoverT * 0.05 + (isSel ? 0.08 : 0)
                         Behavior on scale {
                             NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
                         }
@@ -578,18 +477,18 @@ PanelWindow {
                             }
                         }
 
-                        // Viền glow accent khi hover
+                        // Viền glow accent: nổi rõ khi hover, nhẹ hơn khi được chọn
                         Rectangle {
                             anchors.fill: parent
                             radius: 14
                             color: "transparent"
                             border.width: 2
-                            visible: thumb.hoverT > 0.02
+                            visible: thumb.hoverT > 0.02 || thumb.isSel
                             border.color: Qt.rgba(
                                 root.theme ? root.theme.accent.r : 0.51,
                                 root.theme ? root.theme.accent.g : 0.67,
                                 root.theme ? root.theme.accent.b : 1.0,
-                                thumb.hoverT * 0.85
+                                Math.max(thumb.hoverT * 0.85, thumb.isSel ? 0.45 : 0)
                             )
                         }
 
