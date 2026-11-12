@@ -2,9 +2,46 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Io
 
 ShellRoot {
     Theme { id: theme }
+
+    // Service chia sẻ dữ liệu âm thanh từ Cava
+    CavaService { id: cavaService }
+
+    // Trình khởi chạy ứng dụng (App Launcher) thay thế Rofi
+    AppLauncher {
+        id: appLauncher
+        theme: theme
+    }
+
+    // Handler IPC lắng nghe tín hiệu gọi từ phím tắt mangoWC hoặc script
+    IpcHandler {
+        target: "launcher"
+
+        function toggle() {
+            appLauncher.toggle();
+        }
+
+        function open() {
+            appLauncher.open();
+        }
+
+        function close() {
+            appLauncher.close();
+        }
+    }
+
+    // Visualizer sóng uốn lượn mềm mại ở mép trên cùng
+    TopWaveVisualizer {
+        cavaService: cavaService
+    }
+
+    // Visualizer thanh chữ nhật cổ điển ở mép dưới cùng
+    BottomBarsVisualizer {
+        cavaService: cavaService
+    }
 
     PanelWindow {
         id: bar

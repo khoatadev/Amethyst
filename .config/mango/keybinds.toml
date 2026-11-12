@@ -10,7 +10,7 @@
 "SUPER+r" = "reload_config"
 
 # Menu và terminal
-"SUPER+d" = "spawn,rofi -show drun"
+"SUPER+d" = "spawn,quickshell ipc call launcher toggle"
 "SUPER+t" = "spawn,kitty"
 
 # File manager

@@ -11,7 +11,7 @@
 | **Hệ điều hành** | [Gentoo Linux](https://www.gentoo.org/) | OpenRC init system |
 | **Compositor** | [mangoWC](https://github.com/DreamMaoMao/mango) | Wayland compositor linh hoạt, nhẹ & hiệu năng cao |
 | **Terminal** | [kitty](https://sw.kovidgoyal.net/kitty/) | Terminal GPU-accelerated với font ligatures |
-| **App Launcher** | [rofi](https://github.com/davatorium/rofi) | Chế độ `drun` tối giản, tìm kiếm mờ (fuzzy search) |
+| **App Launcher** | [Quickshell](https://quickshell.outfoxxed.me/) | Trình khởi chạy ứng dụng QML thay thế Rofi, hiệu ứng chuyển động nội suy hai đầu |
 | **File Manager** | [yazi](https://github.com/sxyazi/yazi) | Trình quản lý file TUI siêu tốc |
 | **Status Bar** | [Quickshell](https://quickshell.outfoxxed.me/) | Thanh trạng thái QML hiện đại, mượt mà |
 | **Bảng màu (Palette)**| **Tokyo Night Moon** | Tông màu đêm dịu mắt, huyền bí |
@@ -25,8 +25,8 @@
 | :--- | :--- | :---: | :--- |
 | **mangoWC** | `.config/mango/` | ✅ Hoàn thành | Quản lý cửa sổ, hiệu ứng chuyển động, gaps, keybinds, autostart & remap Caps Lock sang Escape |
 | **kitty** | `.config/kitty/` | ✅ Hoàn thành | Theme Tokyo Night Moon, background opacity 0.90 |
-| **rofi** | `.config/rofi/` | ✅ Hoàn thành | Floating card ở trung tâm, chỉ bật `drun`, icon app |
-| **quickshell** | `.config/quickshell/` | ✅ Hoàn thành | Thanh trạng thái dọc mép trái (Workspaces, Pin, Âm thanh, Độ sáng, Đồng hồ) |
+| **rofi** | `.config/rofi/` | 📦 Dự phòng | Cấu hình Rofi dự phòng (đã thay thế chính bằng Quickshell Launcher) |
+| **quickshell** | `.config/quickshell/` | ✅ Hoàn thành | Thanh trạng thái dọc & App Launcher nổi với hiệu ứng nội suy hai đầu In-Out Easing |
 | **GTK / Qt** | `.config/` | ⏳ Đang làm | Đồng bộ theme ứng dụng đồ họa |
 | **Wallpaper** | `assets/wallpapers/` | ⏳ Đang làm | Hình nền đồng bộ bảng màu |
 
@@ -38,7 +38,7 @@ Các phím tắt chính được cấu hình trong compositor mangoWC (`Mod = Su
 
 | Phím tắt | Tác vụ |
 | :--- | :--- |
-| `Super + D` | Mở App Launcher (**Rofi**) |
+| `Super + D` | Mở App Launcher (**Quickshell Launcher**) |
 | `Super + T` | Mở Terminal (**Kitty**) |
 | `Super + E` | Mở File Manager (**Yazi** trong Kitty) |
 | `Super + Z` | Mở trình duyệt web (**Zen Browser**) |
