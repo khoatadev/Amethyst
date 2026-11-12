@@ -26,6 +26,11 @@ ShellRoot {
     WifiMenu {
         id: wifiMenu
         theme: theme
+
+        // Y tâm của cụm Controls trên màn hình — menu mọc ra kế cạnh capsule
+        function refreshAnchorY() {
+            anchorY = controlsCapsule.getScreenY()
+        }
     }
 
     // Handler IPC lắng nghe tín hiệu gọi từ phím tắt mangoWC hoặc script
@@ -156,10 +161,14 @@ ShellRoot {
 
             // 3. Cụm điều khiển hệ thống gộp chung (Wifi, Độ sáng, Âm thanh, Pin & Power Profile)
             ControlsCapsule {
+                id: controlsCapsule
                 Layout.alignment: Qt.AlignHCenter
 
-                // Click nút wifi trên capsule → mở menu wifi
-                onWifiClicked: wifiMenu.open()
+                // Click nút wifi trên capsule → mở menu wifi (mọc kế capsule)
+                onWifiClicked: {
+                    wifiMenu.refreshAnchorY()
+                    wifiMenu.open()
+                }
             }
         }
     }

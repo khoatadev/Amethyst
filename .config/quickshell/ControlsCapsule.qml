@@ -30,28 +30,55 @@ Rectangle {
         return null;
     }
 
-    // Mạng đang kết nối (để hiện tên/mức sóng trên nút)
-    readonly property var currentNetwork: {
-        if (!wifiDevice || !wifiDevice.networks) return null;
-        let nets = wifiDevice.networks.values;
-        for (let i = 0; i < nets.length; i++) {
-            if (nets[i] && nets[i].connected) return nets[i];
+    // Trạng thái kết nối lấy từ device (đáng tin hơn từng network object —
+    // network.connected không luôn bắn notify khi NM active connection đổi)
+    readonly property bool wifiConnected: wifiDevice
+        ? (wifiDevice.connected || wifiDevice.state === ConnectionState.Connected)
+        : false
+
+    // Mạng đang kết nối (để lấy mức sóng) — cập nhật thủ công qua refresh,
+    // binding var không tự đánh lại khi property của phần tử trong list đổi
+    property var currentNetwork: null
+
+    function refreshWifiState() {
+        let net = null
+        if (wifiDevice && wifiDevice.networks) {
+            let nets = wifiDevice.networks.values
+            for (let i = 0; i < nets.length; i++) {
+                if (nets[i] && nets[i].connected) { net = nets[i]; break }
+            }
         }
-        return null;
+        currentNetwork = net
     }
 
-    // Cường độ sóng hiện tại (0 nếu không kết nối)
+    Connections {
+        target: wifiDevice
+        function onConnectedChanged() { root.refreshWifiState() }
+        function onStateChanged() { root.refreshWifiState() }
+    }
+    Connections {
+        target: wifiDevice ? wifiDevice.networks : null
+        function onValuesChanged() { root.refreshWifiState() }
+    }
+    Component.onCompleted: refreshWifiState()
+
+    // Cường độ sóng hiện tại (0 nếu không có network object)
     readonly property int wifiSignal: currentNetwork ? Math.round(currentNetwork.signalStrength) : 0
 
-    // Icon sóng theo mức tín hiệu (Nerd Font)
+    // Icon đổi theo trạng thái + mức sóng (Nerd Font)
     function wifiIcon() {
-        if (Networking.wifiEnabled === false) return "󰤭";
-        if (!currentNetwork) return "󰤭";
-        if (wifiSignal >= 80) return "󰤨";
-        if (wifiSignal >= 60) return "󰤥";
-        if (wifiSignal >= 40) return "󰤢";
-        if (wifiSignal >= 20) return "󰤟";
+        if (!Networking.wifiEnabled) return "󰤭";
+        if (!root.wifiConnected) return "󰤭";
+        if (root.wifiSignal >= 80) return "󰤨";
+        if (root.wifiSignal >= 60) return "󰤥";
+        if (root.wifiSignal >= 40) return "󰤢";
+        if (root.wifiSignal >= 20) return "󰤟";
         return "󰤯";
+    }
+
+    // Tâm capsule trên màn hình — để shell neo menu wifi mọc ra kế cạnh
+    function getScreenY() {
+        return root.mapToItem(null, root.width / 2, root.height / 2).y
     }
 
     // -------------------------------------------------------------
@@ -352,28 +379,19 @@ Rectangle {
                     text: root.wifiIcon()
                     font.family: theme.fontMono
                     font.pixelSize: 16
-                    color: root.currentNetwork ? theme.accent : theme.fgMuted
+                    color: root.wifiConnected ? theme.accent : theme.fgMuted
                     Behavior on color { ColorAnimation { duration: theme.durFast } }
-                }
-
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: root.currentNetwork ? root.wifiSignal + "%" : "off"
-                    font.family: theme.fontMono
-                    font.pixelSize: 9
-                    font.bold: true
-                    color: root.currentNetwork ? theme.fg : theme.fgSubtle
                 }
             }
 
-            // Bounce khi mức sóng / trạng thái đổi
+            // Bounce khi trạng thái kết nối / sóng đổi
             Connections {
                 target: root
                 function onWifiSignalChanged() {
                     wifiBtn.iconScale = 1.12
                     wifiBounceAnim.restart()
                 }
-                function onCurrentNetworkChanged() {
+                function onWifiConnectedChanged() {
                     wifiBtn.iconScale = 1.12
                     wifiBounceAnim.restart()
                 }

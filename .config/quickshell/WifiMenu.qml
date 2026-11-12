@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import QtQuick.Shapes
 import QtQuick.Controls
 import Quickshell
@@ -24,6 +23,10 @@ PanelWindow {
 
     property var theme
     property bool isOpen: false
+
+    // Y tâm cụm Controls trên màn hình — đảo mọc ra đúng kế cạnh capsule
+    // (shell.qml cập nhật giá trị này mỗi lần trước khi mở)
+    property real anchorY: 0
 
     // ---- Thông số giao diện ----
     readonly property int headerHeight: 48
@@ -192,25 +195,16 @@ PanelWindow {
     }
 
     // =========================================================================
-    // Đảo (Island) mọc từ mép trái màn hình, giữa chiều cao
+    // Đảo (Island) mọc từ mép trái màn hình, kế cạnh cụm Controls
+    // (không shadow — trông như mọc thẳng ra từ thân bar)
     // =========================================================================
     Item {
         id: islandRoot
-        anchors.verticalCenter: parent.verticalCenter
+        // Căn giữa đảo vào Y tâm capsule; nếu chưa có anchorY thì giữa màn hình
         anchors.left: parent.left
+        y: root.anchorY > 0 ? root.anchorY - height / 2 : 0
         width: Math.max(0, root.islandW)
         height: Math.max(0, root.islandH)
-
-        // Bóng đổ mềm phía phải đảo
-        RectangularShadow {
-            anchors.fill: island
-            anchors.leftMargin: root.cornerRadius
-            radius: root.cornerRadius
-            offset.x: 8
-            blur: 36
-            color: Qt.rgba(0, 0, 0, 0.45)
-            opacity: Math.min(1, root.islandW / 40)
-        }
 
         // Thân đảo: kéo dài sang trái thêm cornerRadius để hai góc trái
         // bị giấu sau bar, chỉ còn hai góc phải được bo tròn
