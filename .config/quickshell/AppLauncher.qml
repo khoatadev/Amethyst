@@ -1,23 +1,78 @@
 import QtQuick
-import QtQuick.Layouts
+import QtQuick.Effects
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Wayland
 
+// =============================================================================
+// App Launcher kiểu Dynamic Island mọc lên từ mép dưới màn hình
+// - Ấn Super+D: một viên nhỏ mọc lên từ giữa mép dưới rồi phình to thành launcher
+//   (spring nảy nhẹ), đóng thì co lại và biến mất vào mép dưới màn hình
+// - Đảo dính liền mép dưới, hai góc dưới hoà vào viền bằng góc lõm, bo hai góc trên
+// - Thanh chọn màu trắng, trượt theo kiểu "cursor trail" của kitty:
+//   cạnh dẫn đầu (theo hướng di chuyển) chạy nhanh, cạnh đuôi đuổi theo chậm hơn
+//   nên thanh bị kéo dãn ra rồi co lại khi tới nơi
+// =============================================================================
 PanelWindow {
     id: root
 
     property var theme
     property bool isOpen: false
 
-    // animProgress nội suy từ 0.0 -> 1.0 (mở) hoặc 1.0 -> 0.0 (đóng)
-    property real animProgress: 0.0
+    // ---- Thông số giao diện ----
+    readonly property int openWidth: 600
+    readonly property int closedWidth: 130
+    readonly property int searchHeight: 54
+    readonly property int rowHeight: 42
+    readonly property int maxRows: 8
+    readonly property int listPadding: 8
+    readonly property int cornerRadius: 24     // bo hai góc dưới
+    readonly property int filletRadius: 14     // góc lõm nối với mép màn hình
+    readonly property color islandColor: "#000000"
+    readonly property string fontFamily: theme ? theme.fontMono : "ComicShannsMono Nerd Font"
 
-    // Khi đóng hoàn tất, ẩn hẳn window và nhả bàn phím
-    visible: isOpen || animProgress > 0.001
+    // ---- Thông số cursor trail (mô phỏng cursor_trail_decay 0.1 0.4 của kitty) ----
+    readonly property int trailFast: 110       // cạnh dẫn đầu
+    readonly property int trailSlow: 320       // cạnh đuôi
+
+    // ---- Kích thước đảo hiện tại (được animate) ----
+    property real islandW: closedWidth
+    property real islandH: 0
+
+    readonly property real resultsTargetHeight: {
+        if (!showResults) return 0;
+        if (filteredApps.length === 0) return 48;
+        return Math.min(filteredApps.length, maxRows) * rowHeight + listPadding * 2;
+    }
+    readonly property real targetH: isOpen ? searchHeight + resultsTargetHeight : 0
+    readonly property real targetW: isOpen ? openWidth : closedWidth
+
+    onTargetHChanged: islandH = targetH
+    onTargetWChanged: islandW = targetW
+
+    // Spring nảy nhẹ khi phình ra, co gọn mượt khi đóng
+    Behavior on islandH {
+        NumberAnimation {
+            duration: root.isOpen ? 520 : 300
+            easing.type: root.isOpen ? Easing.OutBack : Easing.InOutCubic
+            easing.overshoot: 1.1
+        }
+    }
+    Behavior on islandW {
+        NumberAnimation {
+            duration: root.isOpen ? 560 : 320
+            easing.type: root.isOpen ? Easing.OutBack : Easing.InOutCubic
+            easing.overshoot: 0.9
+        }
+    }
+
+    visible: isOpen || islandH > 0.5
+    color: "transparent"
 
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: isOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     WlrLayershell.namespace: "launcher"
+    exclusionMode: ExclusionMode.Ignore
 
     anchors {
         top: true
@@ -25,54 +80,14 @@ PanelWindow {
         left: true
         right: true
     }
-    color: "transparent"
-
-    // Hiệu ứng mở/đóng thẻ card nội suy hai đầu (In-Out Easing)
-    Behavior on animProgress {
-        NumberAnimation {
-            duration: 230
-            easing.type: Easing.InOutCubic
-        }
-    }
 
     // =========================================================================
-    // Dữ liệu ứng dụng & Tìm kiếm
+    // Dữ liệu & tìm kiếm
     // =========================================================================
     property var allApps: []
     property var filteredApps: []
-    property int selectedIndex: 0
-
-    // =========================================================================
-    // Hiệu ứng Kitty Cursor Trail (Leading & Trailing Edge Interpolation)
-    // =========================================================================
-    // mainY: Đầu dẫn đường di chuyển nhanh trước với đường cong InOutCubic
-    // trailY: Vệt đuôi trôi theo sau với độ trễ êm ái
-    property real mainY: 2
-    property real trailY: 2
-
-    Behavior on mainY {
-        NumberAnimation {
-            duration: 160
-            easing.type: Easing.InOutCubic
-        }
-    }
-
-    Behavior on trailY {
-        NumberAnimation {
-            duration: 260
-            easing.type: Easing.InOutCubic
-        }
-    }
-
-    onSelectedIndexChanged: {
-        updateCursorPosition();
-    }
-
-    function updateCursorPosition() {
-        let target = selectedIndex * 42 + 2;
-        mainY = target;
-        trailY = target;
-    }
+    property bool showResults: false
+    property int sel: 0
 
     Connections {
         target: DesktopEntries
@@ -81,400 +96,438 @@ PanelWindow {
         }
     }
 
-    Component.onCompleted: {
-        root.refreshApps();
-    }
-
-    Timer {
-        id: retryTimer
-        interval: 250
-        repeat: false
-        onTriggered: {
-            if (root.allApps.length === 0) {
-                root.refreshApps();
-            }
-        }
-    }
+    Component.onCompleted: refreshApps()
 
     function refreshApps() {
         if (!DesktopEntries || !DesktopEntries.applications) return;
         let raw = DesktopEntries.applications.values || [];
-        if (raw.length === 0) return;
-
         let list = [];
         for (let i = 0; i < raw.length; i++) {
             let app = raw[i];
             if (!app || app.noDisplay || !app.name || app.name.trim() === "") continue;
             list.push(app);
         }
-
-        list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+        list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
         allApps = list;
-        filterApps();
+        if (showResults) filterApps();
+    }
+
+    // Chấm điểm: khớp đầu tên > khớp đầu từ > chứa chuỗi > khớp mờ theo thứ tự ký tự
+    function score(name, q) {
+        if (name.startsWith(q)) return 400 - name.length;
+        let words = name.split(/[\s\-_.]+/);
+        for (let w of words) {
+            if (w.startsWith(q)) return 300 - name.length;
+        }
+        if (name.includes(q)) return 200 - name.length;
+        let j = 0;
+        for (let i = 0; i < name.length && j < q.length; i++) {
+            if (name[i] === q[j]) j++;
+        }
+        return j === q.length ? 100 - name.length : -1;
     }
 
     function filterApps() {
-        let query = (searchInput.text || "").trim().toLowerCase();
-        if (!query) {
-            filteredApps = allApps;
-        } else {
-            let direct = [];
-            let fuzzy = [];
-            for (let i = 0; i < allApps.length; i++) {
-                let app = allApps[i];
-                let name = (app.name || "").toLowerCase();
-                if (name.startsWith(query)) {
-                    direct.push(app);
-                } else if (name.includes(query)) {
-                    fuzzy.push(app);
-                }
-            }
-            filteredApps = direct.concat(fuzzy);
+        let q = searchInput.text.trim().toLowerCase();
+        if (q === "") {
+            // Giữ danh sách cũ để nội dung không biến mất đột ngột khi thu lại
+            showResults = false;
+            return;
         }
-        selectedIndex = 0;
-        mainY = 2;
-        trailY = 2;
-        if (appsList) {
-            appsList.positionViewAtIndex(0, ListView.Beginning);
+        let scored = [];
+        for (let app of allApps) {
+            let s = score(app.name.toLowerCase(), q);
+            if (s >= 0) scored.push({ app: app, s: s });
         }
+        scored.sort((a, b) => b.s - a.s);
+        filteredApps = scored.map(x => x.app);
+        showResults = true;
+        appsList.contentY = 0;
+        select(0, true);
     }
 
-    function selectNext() {
-        if (filteredApps.length === 0) return;
-        selectedIndex = (selectedIndex + 1) % filteredApps.length;
-        appsList.positionViewAtIndex(selectedIndex, ListView.Contain);
+    // ---- Chọn mục + kích hoạt hiệu ứng trail ----
+    function select(idx, instant) {
+        let n = filteredApps.length;
+        if (n === 0) return;
+        idx = ((idx % n) + n) % n;
+        let newTop = idx * rowHeight;
+        trail.movingDown = newTop >= trail.topEdge;
+        trail.instant = instant === true;
+        sel = idx;
+        trail.topEdge = newTop;
+        trail.bottomEdge = newTop + rowHeight;
+        trail.instant = false;
+        ensureVisible(idx);
     }
 
-    function selectPrevious() {
-        if (filteredApps.length === 0) return;
-        selectedIndex = (selectedIndex - 1 + filteredApps.length) % filteredApps.length;
-        appsList.positionViewAtIndex(selectedIndex, ListView.Contain);
+    // Cuộn mượt để mục đang chọn luôn nằm trong khung
+    function ensureVisible(idx) {
+        let top = idx * rowHeight;
+        let bottom = top + rowHeight;
+        let target = appsList.contentY;
+        if (top < target) target = top;
+        else if (bottom > target + appsList.height) target = bottom - appsList.height;
+        if (target === appsList.contentY) return;
+        scrollAnim.stop();
+        scrollAnim.to = target;
+        scrollAnim.start();
     }
 
     function launchSelected() {
-        if (filteredApps.length > 0 && selectedIndex >= 0 && selectedIndex < filteredApps.length) {
-            let app = filteredApps[selectedIndex];
-            if (app && typeof app.execute === "function") {
-                app.execute();
-            }
-            root.close();
-        }
+        if (!showResults || filteredApps.length === 0) return;
+        let app = filteredApps[sel];
+        if (app) app.execute();
+        close();
     }
 
     function open() {
-        if (allApps.length === 0) {
-            refreshApps();
-            if (allApps.length === 0) retryTimer.start();
-        }
-        selectedIndex = 0;
-        mainY = 2;
-        trailY = 2;
-        isOpen = true;
-        animProgress = 1.0;
+        if (allApps.length === 0) refreshApps();
         searchInput.text = "";
-        filterApps();
-        Qt.callLater(() => {
-            searchInput.forceActiveFocus();
-        });
+        showResults = false;
+        isOpen = true;
+        Qt.callLater(() => searchInput.forceActiveFocus());
     }
 
     function close() {
         isOpen = false;
-        animProgress = 0.0;
     }
 
     function toggle() {
-        if (isOpen) {
-            close();
-        } else {
-            open();
-        }
+        isOpen ? close() : open();
     }
 
-    // 1. Nền mờ tối giản đen tuyền toàn màn hình (Black Scrim Backdrop)
-    Rectangle {
-        id: backdrop
+    // =========================================================================
+    // Click ra ngoài để đóng
+    // =========================================================================
+    MouseArea {
         anchors.fill: parent
-        color: "#000000"
-        opacity: 0.72 * root.animProgress
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: root.close()
-        }
+        onClicked: root.close()
     }
 
-    // 2. Thẻ Card nổi ở trung tâm — Phong cách tối giản nền đen sâu thẳm
-    Rectangle {
-        id: card
-        width: 540
+    // =========================================================================
+    // Đảo (Island) mọc từ mép dưới màn hình
+    // =========================================================================
+    Item {
+        id: islandRoot
         anchors.horizontalCenter: parent.horizontalCenter
-        y: (parent.height * 0.22) + ((1.0 - root.animProgress) * -18)
+        anchors.bottom: parent.bottom
+        width: Math.max(0, root.islandW)
+        height: Math.max(0, root.islandH)
 
-        scale: 0.95 + (0.05 * root.animProgress)
-        opacity: root.animProgress
-
-        radius: 12
-        color: "#050508" // Nền đen tuyền sâu thẳm, tinh tế
-        border.width: 1
-        border.color: searchInput.activeFocus ? "#2d334d" : "#161722"
-
-        implicitHeight: cardLayout.implicitHeight
-
-        MouseArea {
-            anchors.fill: parent
+        // Bóng đổ mềm phía trên đảo
+        RectangularShadow {
+            anchors.fill: island
+            anchors.bottomMargin: root.cornerRadius
+            radius: root.cornerRadius
+            offset.y: -8
+            blur: 36
+            color: Qt.rgba(0, 0, 0, 0.45)
+            opacity: Math.min(1, root.islandH / 40)
         }
 
-        ColumnLayout {
-            id: cardLayout
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            spacing: 0
+        // Thân đảo: kéo xuống dưới mép màn hình một đoạn bằng bán kính
+        // để hai góc dưới bị giấu đi, chỉ còn hai góc trên được bo tròn
+        Rectangle {
+            id: island
+            x: 0
+            y: 0
+            width: parent.width
+            height: parent.height + root.cornerRadius
+            radius: Math.min(root.cornerRadius, (parent.height + root.cornerRadius) / 2)
+            color: root.islandColor
 
-            // Header tìm kiếm tối giản (Clean Search Bar)
+            MouseArea {
+                anchors.fill: parent
+            }
+        }
+
+        // Góc lõm bên trái: nối mềm thân đảo với mép dưới màn hình
+        Shape {
+            id: filletLeft
+            readonly property real r: Math.min(root.filletRadius, root.islandH)
+            visible: r > 0.5
+            x: -r
+            y: parent.height - r
+            width: r
+            height: r
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                strokeWidth: 0
+                strokeColor: "transparent"
+                fillColor: root.islandColor
+                startX: 0; startY: filletLeft.r
+                PathLine { x: filletLeft.r; y: filletLeft.r }
+                PathLine { x: filletLeft.r; y: 0 }
+                PathArc {
+                    x: 0; y: filletLeft.r
+                    radiusX: filletLeft.r; radiusY: filletLeft.r
+                    direction: PathArc.Clockwise
+                }
+            }
+        }
+
+        // Góc lõm bên phải: nối mềm thân đảo với mép dưới màn hình
+        Shape {
+            id: filletRight
+            readonly property real r: Math.min(root.filletRadius, root.islandH)
+            visible: r > 0.5
+            x: parent.width
+            y: parent.height - r
+            width: r
+            height: r
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                strokeWidth: 0
+                strokeColor: "transparent"
+                fillColor: root.islandColor
+                startX: filletRight.r; startY: filletRight.r
+                PathLine { x: 0; y: filletRight.r }
+                PathLine { x: 0; y: 0 }
+                PathArc {
+                    x: filletRight.r; y: filletRight.r
+                    radiusX: filletRight.r; radiusY: filletRight.r
+                    direction: PathArc.Counterclockwise
+                }
+            }
+        }
+
+        // ---------------- Nội dung đảo ----------------
+        Item {
+            id: content
+            anchors.fill: parent
+            clip: true
+            // Nội dung chỉ hiện dần khi đảo đã phình đủ lớn
+            opacity: Math.max(0, Math.min(1, (root.islandH - 24) / 26))
+                     * Math.max(0, Math.min(1, (root.islandW - 300) / 200))
+
             Item {
-                Layout.fillWidth: true
-                implicitHeight: 48
+                id: inner
+                width: root.openWidth
+                height: parent.height
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom
 
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 16
-                    anchors.rightMargin: 16
-                    spacing: 12
+                // ---------- Thanh tìm kiếm (cố định sát đáy màn hình) ----------
+                Item {
+                    id: searchBar
+                    anchors.bottom: parent.bottom
+                    width: parent.width
+                    height: root.searchHeight
 
                     Text {
-                        text: ""
-                        font.family: root.theme ? root.theme.fontMono : "ComicShannsMono Nerd Font"
-                        font.pixelSize: 14
-                        color: "#82aaff"
-                        Layout.alignment: Qt.AlignVCenter
+                        id: searchIcon
+                        anchors.left: parent.left
+                        anchors.leftMargin: 22
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "\uf002"
+                        font.family: root.fontFamily
+                        font.pixelSize: 16
+                        color: Qt.rgba(1, 1, 1, 0.45)
                     }
 
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
+                    TextInput {
+                        id: searchInput
+                        anchors.left: searchIcon.right
+                        anchors.leftMargin: 14
+                        anchors.right: parent.right
+                        anchors.rightMargin: 22
+                        anchors.verticalCenter: parent.verticalCenter
+                        font.family: root.fontFamily
+                        font.pixelSize: 16
+                        color: "#ffffff"
+                        selectionColor: Qt.rgba(1, 1, 1, 0.25)
+                        selectedTextColor: "#ffffff"
+                        clip: true
 
-                        TextInput {
-                            id: searchInput
-                            anchors.fill: parent
-                            verticalAlignment: TextInput.AlignVCenter
-                            font.family: root.theme ? root.theme.fontMono : "ComicShannsMono Nerd Font"
-                            font.pixelSize: 13
-                            color: "#ffffff"
-                            selectionColor: "#82aaff"
-                            selectedTextColor: "#050508"
-                            clip: true
+                        onTextChanged: root.filterApps()
 
-                            onTextChanged: {
-                                root.filterApps();
-                            }
-
-                            Keys.onDownPressed: (event) => {
+                        Keys.onPressed: (event) => {
+                            let ctrl = event.modifiers & Qt.ControlModifier;
+                            switch (event.key) {
+                            case Qt.Key_Down:
+                            case Qt.Key_Tab:
+                                root.select(root.sel + 1);
                                 event.accepted = true;
-                                root.selectNext();
-                            }
-                            Keys.onUpPressed: (event) => {
+                                break;
+                            case Qt.Key_Up:
+                            case Qt.Key_Backtab:
+                                root.select(root.sel - 1);
                                 event.accepted = true;
-                                root.selectPrevious();
-                            }
-                            Keys.onTabPressed: (event) => {
-                                event.accepted = true;
-                                root.selectNext();
-                            }
-                            Keys.onBacktabPressed: (event) => {
-                                event.accepted = true;
-                                root.selectPrevious();
-                            }
-                            Keys.onReturnPressed: (event) => {
-                                event.accepted = true;
+                                break;
+                            case Qt.Key_J:
+                            case Qt.Key_N:
+                                if (ctrl) { root.select(root.sel + 1); event.accepted = true; }
+                                break;
+                            case Qt.Key_K:
+                            case Qt.Key_P:
+                                if (ctrl) { root.select(root.sel - 1); event.accepted = true; }
+                                break;
+                            case Qt.Key_Return:
+                            case Qt.Key_Enter:
                                 root.launchSelected();
-                            }
-                            Keys.onEnterPressed: (event) => {
                                 event.accepted = true;
-                                root.launchSelected();
-                            }
-                            Keys.onEscapePressed: (event) => {
+                                break;
+                            case Qt.Key_Escape:
+                                // Esc lần đầu xoá chữ, lần sau mới đóng
+                                if (searchInput.text !== "") searchInput.text = "";
+                                else root.close();
                                 event.accepted = true;
-                                root.close();
+                                break;
                             }
                         }
 
                         Text {
                             anchors.fill: parent
                             verticalAlignment: Text.AlignVCenter
-                            text: "Tìm kiếm ứng dụng..."
-                            font.family: root.theme ? root.theme.fontMono : "ComicShannsMono Nerd Font"
-                            font.pixelSize: 13
-                            color: "#3b4261"
-                            visible: !searchInput.text && !searchInput.inputMethodComposing
+                            text: "Tìm kiếm ứng dụng"
+                            font: searchInput.font
+                            color: Qt.rgba(1, 1, 1, 0.3)
+                            visible: searchInput.text === "" && !searchInput.inputMethodComposing
                         }
                     }
                 }
-            }
 
-            // Đường chia hairline siêu mảnh tối giản
-            Rectangle {
-                Layout.fillWidth: true
-                implicitHeight: 1
-                color: "#12131c"
-            }
-
-            // Danh sách ứng dụng có vệt Kitty Cursor Trail trượt mượt mà
-            Item {
-                Layout.fillWidth: true
-                implicitHeight: root.filteredApps.length > 0 ? Math.min(336, root.filteredApps.length * 42 + 8) : 80
-                clip: true
-
-                // =============================================================
-                // HIỆU ỨNG VỆT CON TRỎ KITTY (Kitty Cursor Trail)
-                // Co dãn (Squash & Stretch) nội suy hai đầu khi trượt giữa các dòng
-                // =============================================================
+                // ---------- Danh sách kết quả (bung lên phía trên thanh tìm kiếm) ----------
                 Item {
-                    id: cursorTrail
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.leftMargin: 8
-                    anchors.rightMargin: 8
-                    visible: root.filteredApps.length > 0
+                    id: resultsArea
+                    anchors.bottom: searchBar.top
+                    width: parent.width
+                    height: root.resultsTargetHeight
 
-                    // Vị trí và chiều cao tự động co dãn theo độ trễ giữa mainY và trailY
-                    y: Math.min(root.mainY, root.trailY) - appsList.contentY + 4
-                    height: Math.abs(root.mainY - root.trailY) + 36
-
-                    // 1. Thanh chọn chính (Dark Pill)
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 8
-                        color: "#141520"
-                        border.width: 1
-                        border.color: "#282a3c"
+                    opacity: root.showResults ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation { duration: root.showResults ? 220 : 120 }
                     }
 
-                    // 2. Vệt sáng sao băng bừng sáng khi di chuyển (Trail Glow)
-                    Rectangle {
+                    ListView {
+                        id: appsList
                         anchors.fill: parent
-                        radius: 8
-                        color: "#82aaff"
-                        opacity: Math.min(0.25, Math.abs(root.mainY - root.trailY) / 50)
-                    }
-                }
+                        anchors.margins: root.listPadding
+                        clip: true
+                        model: root.filteredApps
+                        boundsBehavior: Flickable.StopAtBounds
+                        highlightFollowsCurrentItem: false
+                        currentIndex: -1
 
-                // Danh sách ứng dụng nằm phía trên con trỏ trượt
-                ListView {
-                    id: appsList
-                    anchors.fill: parent
-                    anchors.topMargin: 4
-                    anchors.bottomMargin: 4
-                    clip: true
-                    boundsBehavior: Flickable.StopAtBounds
+                        NumberAnimation {
+                            id: scrollAnim
+                            target: appsList
+                            property: "contentY"
+                            duration: 220
+                            easing.type: Easing.OutCubic
+                        }
 
-                    model: root.filteredApps
-                    currentIndex: root.selectedIndex
+                        // ---- Thanh chọn trắng với hiệu ứng cursor trail ----
+                        // Gắn trực tiếp vào contentItem với z: -1 để nằm dưới chữ/icon
+                        // và tự động cuộn đồng bộ cùng danh sách
+                        Rectangle {
+                            id: trail
+                            parent: appsList.contentItem
+                            property real topEdge: 0
+                            property real bottomEdge: root.rowHeight
+                            property bool movingDown: true
+                            property bool instant: false
 
-                    // Tắt highlight mặc định của ListView để dùng hiệu ứng Kitty Cursor Trail bên dưới
-                    highlight: null
+                            z: -1
+                            x: 0
+                            width: appsList.width
+                            y: topEdge
+                            height: Math.max(0, bottomEdge - topEdge)
+                            radius: 10
+                            color: "#ffffff"
+                            visible: root.filteredApps.length > 0
 
-                    delegate: Item {
-                        id: appItem
-                        width: appsList.width
-                        height: 42
-
-                        readonly property bool isCurrent: index === root.selectedIndex
-
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 16
-                            anchors.rightMargin: 16
-                            spacing: 12
-
-                            // Icon ứng dụng
-                            Item {
-                                implicitWidth: 24
-                                implicitHeight: 24
-                                Layout.alignment: Qt.AlignVCenter
-
-                                Image {
-                                    id: iconImg
-                                    anchors.fill: parent
-                                    sourceSize.width: 32
-                                    sourceSize.height: 32
-                                    fillMode: Image.PreserveAspectFit
-                                    asynchronous: true
-                                    opacity: appItem.isCurrent ? 1.0 : 0.75
-                                    source: (modelData && modelData.icon) ? Quickshell.iconPath(modelData.icon) : ""
-                                }
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "󰀻"
-                                    font.pixelSize: 16
-                                    color: "#82aaff"
-                                    visible: !iconImg.source || iconImg.status === Image.Error || iconImg.status === Image.Null
+                            Behavior on topEdge {
+                                enabled: !trail.instant
+                                NumberAnimation {
+                                    duration: trail.movingDown ? root.trailSlow : root.trailFast
+                                    easing.type: Easing.OutCubic
                                 }
                             }
+                            Behavior on bottomEdge {
+                                enabled: !trail.instant
+                                NumberAnimation {
+                                    duration: trail.movingDown ? root.trailFast : root.trailSlow
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+                        }
 
-                            // Tên ứng dụng (tối giản, không có mô tả)
+                        delegate: Item {
+                            id: row
+                            required property var modelData
+                            required property int index
+                            readonly property bool selected: index === root.sel
+
+                            z: 1
+                            width: appsList.width
+                            height: root.rowHeight
+
+                            Image {
+                                id: icon
+                                anchors.left: parent.left
+                                anchors.leftMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 24
+                                height: 24
+                                sourceSize.width: 48
+                                sourceSize.height: 48
+                                fillMode: Image.PreserveAspectFit
+                                asynchronous: true
+                                smooth: true
+                                mipmap: true
+                                source: row.modelData && row.modelData.icon
+                                        ? Quickshell.iconPath(row.modelData.icon, true)
+                                        : ""
+                            }
+
                             Text {
-                                Layout.fillWidth: true
-                                Layout.alignment: Qt.AlignVCenter
-                                text: modelData ? modelData.name : ""
-                                font.family: root.theme ? root.theme.fontMono : "ComicShannsMono Nerd Font"
-                                font.pixelSize: 12
-                                font.weight: appItem.isCurrent ? Font.Medium : Font.Normal
-                                color: appItem.isCurrent ? "#ffffff" : "#727796"
-                                elide: Text.ElideRight
+                                anchors.centerIn: icon
+                                visible: icon.status !== Image.Ready
+                                text: "\uf40e"
+                                font.family: root.fontFamily
+                                font.pixelSize: 16
+                                color: row.selected ? "#000000" : Qt.rgba(1, 1, 1, 0.5)
                             }
-                        }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onPositionChanged: {
-                                if (root.selectedIndex !== index) {
-                                    root.selectedIndex = index;
+                            Text {
+                                anchors.left: icon.right
+                                anchors.leftMargin: 14
+                                anchors.right: parent.right
+                                anchors.rightMargin: 14
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: row.modelData ? row.modelData.name : ""
+                                font.family: root.fontFamily
+                                font.pixelSize: 14
+                                elide: Text.ElideRight
+                                color: row.selected ? "#000000" : Qt.rgba(1, 1, 1, 0.62)
+                                Behavior on color { ColorAnimation { duration: 120 } }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onPositionChanged: {
+                                    if (root.sel !== row.index) root.select(row.index);
+                                }
+                                onClicked: {
+                                    root.select(row.index);
+                                    root.launchSelected();
                                 }
                             }
-                            onClicked: {
-                                root.selectedIndex = index;
-                                root.launchSelected();
-                            }
                         }
                     }
-                }
 
-                // Trạng thái trống khi không tìm thấy ứng dụng
-                Item {
-                    anchors.fill: parent
-                    visible: root.filteredApps.length === 0
-
-                    RowLayout {
+                    Text {
                         anchors.centerIn: parent
-                        spacing: 8
-
-                        Text {
-                            text: ""
-                            font.family: root.theme ? root.theme.fontMono : "ComicShannsMono Nerd Font"
-                            font.pixelSize: 14
-                            color: "#414868"
-                            Layout.alignment: Qt.AlignVCenter
-                        }
-
-                        Text {
-                            text: "Không tìm thấy ứng dụng phù hợp"
-                            font.family: root.theme ? root.theme.fontMono : "ComicShannsMono Nerd Font"
-                            font.pixelSize: 12
-                            color: "#414868"
-                            Layout.alignment: Qt.AlignVCenter
-                        }
+                        visible: root.showResults && root.filteredApps.length === 0
+                        text: "Không có kết quả"
+                        font.family: root.fontFamily
+                        font.pixelSize: 14
+                        color: Qt.rgba(1, 1, 1, 0.35)
                     }
                 }
-            }
-
-            // Khoảng trống chân trang tinh tế
-            Item {
-                Layout.fillWidth: true
-                implicitHeight: 6
             }
         }
     }
