@@ -9,11 +9,11 @@ import Quickshell.Networking
 
 // =============================================================================
 // Wifi Menu — "Wifi Island" mọc ra từ mép trái màn hình, ngang cụm Controls
-// - Đồng bộ aesthetic với WallpaperMenu/AppLauncher: đảo đen bo hai góc phải
-//   (góc nối với mép bar), góc lõm nối mép trái, spring nảy nhẹ khi mở
+// - Cửa sổ full-screen overlay như WallpaperMenu: đảo đen mọc từ mép trái,
+//   căn giữa chiều cao màn hình, bo hai góc phải + góc lõm nối vào bar
 // - Danh sách mạng quét live qua Quickshell.Networking (NetworkManager):
 //   icon sóng theo cường độ, khóa cho mạng có mật khẩu, chấm xanh pulse +
-//   nút ngắt kết nối cho mạng đang dùng
+//   viền active cho mạng đang dùng
 // - Mạng đã lưu (known) kết nối 1 click; mạng lạ có mật khẩu mở ô nhập
 //   password ngay dưới dòng đó — Enter để connectWithPsk()
 // - Pill bật/tắt wifi ở header (Networking.wifiEnabled)
@@ -26,8 +26,6 @@ PanelWindow {
     property bool isOpen: false
 
     // ---- Thông số giao diện ----
-    readonly property int openHeight: 520
-    readonly property int closedHeight: 130
     readonly property int headerHeight: 48
     readonly property int rowHeight: 44
     readonly property int maxRows: 9
@@ -35,12 +33,13 @@ PanelWindow {
     readonly property int menuWidth: 380
     readonly property int cornerRadius: 24     // bo hai góc phải
     readonly property int filletRadius: 14     // góc lõm nối với mép bar
-    readonly property color islandColor: "#000000"
+    // Nền đảo khớp màu bar (Tokyo Night) thay vì đen thuần
+    readonly property color islandColor: theme ? theme.bgDark : "#1e2030"
     readonly property string fontFamily: theme ? theme.fontMono : "ComicShannsMono Nerd Font"
 
     // ---- Kích thước đảo hiện tại (được animate) ----
     property real islandW: 0
-    property real islandH: closedHeight
+    property real islandH: 380
 
     readonly property real listTargetHeight: {
         if (!wifiDevice || !wifiDevice.networks) return 48;
@@ -48,7 +47,7 @@ PanelWindow {
         if (n === 0) return 48;
         return Math.min(n, maxRows) * rowHeight + listPadding * 2;
     }
-    readonly property real targetH: isOpen ? Math.min(openHeight, headerHeight + listTargetHeight + 10) : closedHeight
+    readonly property real targetH: headerHeight + listTargetHeight + 22
     readonly property real targetW: isOpen ? menuWidth : 0
 
     onTargetHChanged: islandH = targetH
@@ -78,9 +77,8 @@ PanelWindow {
     WlrLayershell.namespace: "wifimenu"
     exclusionMode: ExclusionMode.Ignore
 
-    // Đảo mọc từ mép trái, dọc theo bar — neo top/bottom full rồi căn giữa
-    anchors { top: true; bottom: true; left: true }
-    implicitHeight: 1000
+    // Full-screen overlay như WallpaperMenu — đảo bên trong tự anchor
+    anchors { top: true; bottom: true; left: true; right: true }
 
     // =========================================================================
     // Dữ liệu wifi qua Quickshell.Networking (NetworkManager backend)
@@ -282,7 +280,6 @@ PanelWindow {
             anchors.fill: parent
             clip: true
             opacity: Math.max(0, Math.min(1, (root.islandW - 100) / 160))
-                     * Math.max(0, Math.min(1, (root.islandH - 60) / 40))
 
             // ---------- Header: tiêu đề + pill bật/tắt wifi ----------
             Item {
@@ -299,7 +296,7 @@ PanelWindow {
                     text: "󰤨  wi-fi"
                     font.family: root.fontFamily
                     font.pixelSize: 14
-                    color: Qt.rgba(1, 1, 1, 0.9)
+                    color: root.theme ? root.theme.fg : "#c8d3f5"
                 }
 
                 // Pill bật/tắt wifi (Networking.wifiEnabled)
@@ -316,7 +313,7 @@ PanelWindow {
                     border.width: 1
                     border.color: Networking.wifiEnabled
                                    ? (root.theme ? root.theme.borderActive : "#82aaff")
-                                   : Qt.rgba(1, 1, 1, 0.12)
+                                   : (root.theme ? root.theme.borderHover : "#444a73")
 
                     // Chấm trạng thái
                     Rectangle {
@@ -327,7 +324,7 @@ PanelWindow {
                         radius: 4
                         color: Networking.wifiEnabled
                                ? (root.theme ? root.theme.green : "#c3e88d")
-                               : Qt.rgba(1, 1, 1, 0.3)
+                               : (root.theme ? root.theme.fgSubtle : "#545c7e")
                     }
 
                     Text {
@@ -338,7 +335,9 @@ PanelWindow {
                         text: Networking.wifiEnabled ? "on" : "off"
                         font.family: root.fontFamily
                         font.pixelSize: 12
-                        color: Networking.wifiEnabled ? Qt.rgba(1, 1, 1, 0.7) : Qt.rgba(1, 1, 1, 0.4)
+                        color: Networking.wifiEnabled
+                               ? (root.theme ? root.theme.fg : "#c8d3f5")
+                               : (root.theme ? root.theme.fgMuted : "#828bb8")
                     }
 
                     MouseArea {
@@ -386,7 +385,7 @@ PanelWindow {
                         anchors.fill: parent
                         radius: 10
                         color: netRow.isCurrent
-                               ? Qt.rgba(1, 1, 1, 0.08)
+                               ? Qt.rgba(1, 1, 1, 0.06)
                                : (netRow.hovered ? Qt.rgba(1, 1, 1, 0.05) : "transparent")
                         border.width: 1
                         border.color: netRow.isCurrent
@@ -423,7 +422,7 @@ PanelWindow {
                         font.pixelSize: 16
                         color: netRow.isCurrent
                                ? (root.theme ? root.theme.accent : "#82aaff")
-                               : Qt.rgba(1, 1, 1, 0.7)
+                               : (root.theme ? root.theme.fg : "#c8d3f5")
                     }
 
                     // Tên mạng
@@ -436,7 +435,9 @@ PanelWindow {
                         text: netRow.net ? netRow.net.name : ""
                         font.family: root.fontFamily
                         font.pixelSize: 13
-                        color: netRow.isCurrent ? Qt.rgba(1, 1, 1, 0.95) : Qt.rgba(1, 1, 1, 0.7)
+                        color: netRow.isCurrent
+                               ? (root.theme ? root.theme.fg : "#c8d3f5")
+                               : (root.theme ? root.theme.fgMuted : "#828bb8")
                         elide: Text.ElideRight
                     }
 
@@ -450,7 +451,7 @@ PanelWindow {
                         visible: netRow.net && netRow.net.security !== WifiSecurityType.Open
                         font.family: root.fontFamily
                         font.pixelSize: 12
-                        color: Qt.rgba(1, 1, 1, 0.35)
+                        color: root.theme ? root.theme.fgSubtle : "#545c7e"
                     }
 
                     // Chấm xanh pulse: mạng đang dùng
@@ -468,8 +469,8 @@ PanelWindow {
                         SequentialAnimation on scale {
                             running: netRow.isCurrent
                             loops: Animation.Infinite
-                            NumberAnimation { from: 1; to: 1.35; duration: 900; easing.type: Easing.InOutSine }
-                            NumberAnimation { from: 1.35; to: 1; duration: 900; easing.type: Easing.InOutSine }
+                            NumberAnimation { from: 1; to: 1.5; duration: 900; easing.type: Easing.InOutSine }
+                            NumberAnimation { from: 1.5; to: 1; duration: 900; easing.type: Easing.InOutSine }
                         }
                     }
 
@@ -496,7 +497,7 @@ PanelWindow {
                             verticalAlignment: TextInput.AlignVCenter
                             font.family: root.fontFamily
                             font.pixelSize: 12
-                            color: Qt.rgba(1, 1, 1, 0.9)
+                            color: root.theme ? root.theme.fg : "#c8d3f5"
                             echoMode: TextInput.Password
                             clip: true
                             passwordCharacter: "•"
@@ -525,7 +526,7 @@ PanelWindow {
                 text: Networking.wifiEnabled ? "đang quét..." : "wifi đang tắt"
                 font.family: root.fontFamily
                 font.pixelSize: 12
-                color: Qt.rgba(1, 1, 1, 0.35)
+                color: root.theme ? root.theme.fgSubtle : "#545c7e"
             }
 
             // ---------- Bắt phím khi menu mở ----------
