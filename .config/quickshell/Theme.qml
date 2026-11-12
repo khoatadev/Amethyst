@@ -31,6 +31,22 @@ QtObject {
     readonly property color red: "#ff757f"        // Battery Low / Mute
     readonly property color purple: "#c099ff"     // Extra accent
 
+    // =========================================================================
+    // Glow variants (alpha ~0.3) — dùng cho hiệu ứng phát sáng / ripple
+    // =========================================================================
+    readonly property color accentGlow: Qt.rgba(0x82 / 255, 0xaa / 255, 0xff / 255, 0.35)
+    readonly property color glowGreen: Qt.rgba(0xc3 / 255, 0xe8 / 255, 0x8d / 255, 0.30)
+    readonly property color glowYellow: Qt.rgba(0xff / 255, 0xc7 / 255, 0x77 / 255, 0.30)
+    readonly property color glowRed: Qt.rgba(0xff / 255, 0x75 / 255, 0x7f / 255, 0.30)
+    readonly property color glowPurple: Qt.rgba(0xc0 / 255, 0x99 / 255, 0xff / 255, 0.30)
+
+    // =========================================================================
+    // Animation constants (ms)
+    // =========================================================================
+    readonly property int durFast: 150
+    readonly property int durMed: 250
+    readonly property int durSlow: 400
+
     // Typography
     readonly property string fontMono: "ComicShannsMono Nerd Font"
 }

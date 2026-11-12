@@ -8,10 +8,12 @@ Rectangle {
 
     Theme { id: theme }
 
-    width: 38
+    width: 42
     height: col.implicitHeight + 16
     radius: width / 2
     color: theme.bgDark
+    border.width: 1
+    border.color: theme.border
 
     // -------------------------------------------------------------
     // Brightness Logic
@@ -227,6 +229,11 @@ Rectangle {
     }
 
     // -------------------------------------------------------------
+    // Low battery state
+    // -------------------------------------------------------------
+    readonly property bool lowBattery: batteryPct < 20 && !isCharging
+
+    // -------------------------------------------------------------
     // UI Layout
     // -------------------------------------------------------------
     Column {
@@ -236,27 +243,77 @@ Rectangle {
 
         // 1. Độ sáng (Brightness)
         Item {
-            width: 32
-            height: 34
+            id: brightBtn
+            width: 34
+            height: 36
             anchors.horizontalCenter: parent.horizontalCenter
+
+            property real iconScale: 1.0
+            property color ringColor: theme.yellow
+            property real ringValue: root.brightness / 100
 
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
                 color: theme.bgHover
                 opacity: brightMouse.containsMouse ? 0.8 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 150 } }
+                Behavior on opacity { NumberAnimation { duration: theme.durFast } }
+            }
+
+            // Vòng cung tiến độ (hiện khi hover)
+            Canvas {
+                id: brightRing
+                anchors.fill: parent
+                opacity: brightMouse.containsMouse ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 200 } }
+
+                onPaint: {
+                    let ctx = getContext("2d")
+                    ctx.reset()
+                    let cx = width / 2, cy = height / 2, r = Math.min(width, height) / 2 - 2
+                    ctx.strokeStyle = theme.border
+                    ctx.lineWidth = 2
+                    ctx.beginPath()
+                    ctx.arc(cx, cy, r, 0, Math.PI * 2)
+                    ctx.stroke()
+                    if (brightBtn.ringValue > 0) {
+                        ctx.strokeStyle = brightBtn.ringColor
+                        ctx.lineWidth = 2
+                        ctx.lineCap = "round"
+                        ctx.beginPath()
+                        let start = -Math.PI / 2
+                        ctx.arc(cx, cy, r, start, start + Math.PI * 2 * brightBtn.ringValue)
+                        ctx.stroke()
+                    }
+                }
+                Connections {
+                    target: brightBtn
+                    function onRingValueChanged() { brightRing.requestPaint() }
+                }
+            }
+
+            // Ripple khi click
+            RippleEffect {
+                id: brightRipple
+                anchors.fill: parent
+                clip: true
+                rippleColor: theme.glowYellow
             }
 
             Column {
                 anchors.centerIn: parent
                 spacing: 2
+                scale: brightBtn.iconScale
+                Behavior on scale {
+                    NumberAnimation { duration: theme.durMed; easing.type: Easing.OutBack }
+                }
 
                 Text {
+                    id: brightIcon
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: root.brightness > 70 ? "󰃠" : (root.brightness > 30 ? "󰃟" : "󰃞")
                     font.family: theme.fontMono
-                    font.pixelSize: 15
+                    font.pixelSize: 16
                     color: theme.yellow
                 }
 
@@ -270,6 +327,23 @@ Rectangle {
                 }
             }
 
+            // Bounce khi giá trị đổi
+            Connections {
+                target: root
+                function onBrightnessChanged() {
+                    brightBtn.iconScale = 1.12
+                    brightBounceAnim.restart()
+                }
+            }
+            NumberAnimation {
+                id: brightBounceAnim
+                target: brightBtn
+                property: "iconScale"
+                to: 1.0
+                duration: 250
+                easing.type: Easing.OutBack
+            }
+
             MouseArea {
                 id: brightMouse
                 anchors.fill: parent
@@ -279,35 +353,96 @@ Rectangle {
                     if (wheel.angleDelta.y > 0) root.stepBrightness("5%+")
                     else root.stepBrightness("5%-")
                 }
+                onClicked: brightRipple.trigger(brightMouse)
             }
         }
 
         // Divider
         Rectangle {
-            width: 18
+            width: 22
             height: 1
-            color: theme.bg
+            color: theme.borderHover
             anchors.horizontalCenter: parent.horizontalCenter
             opacity: 0.8
         }
 
         // 2. Âm thanh (Audio)
         Item {
-            width: 32
-            height: 34
+            id: audioBtn
+            width: 34
+            height: 36
             anchors.horizontalCenter: parent.horizontalCenter
+
+            property real iconScale: 1.0
+            property real ringValue: root.volume / 100
 
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
                 color: theme.bgHover
                 opacity: audioMouse.containsMouse ? 0.8 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 150 } }
+                Behavior on opacity { NumberAnimation { duration: theme.durFast } }
+            }
+
+            // Glow đỏ pulse khi mute
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: theme.glowRed
+                visible: root.isMuted
+                SequentialAnimation on opacity {
+                    running: root.isMuted
+                    loops: Animation.Infinite
+                    NumberAnimation { from: 0.3; to: 0.7; duration: 900; easing.type: Easing.InOutSine }
+                    NumberAnimation { from: 0.7; to: 0.3; duration: 900; easing.type: Easing.InOutSine }
+                }
+            }
+
+            Canvas {
+                id: audioRing
+                anchors.fill: parent
+                opacity: audioMouse.containsMouse ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 200 } }
+
+                onPaint: {
+                    let ctx = getContext("2d")
+                    ctx.reset()
+                    let cx = width / 2, cy = height / 2, r = Math.min(width, height) / 2 - 2
+                    ctx.strokeStyle = theme.border
+                    ctx.lineWidth = 2
+                    ctx.beginPath()
+                    ctx.arc(cx, cy, r, 0, Math.PI * 2)
+                    ctx.stroke()
+                    if (audioBtn.ringValue > 0) {
+                        ctx.strokeStyle = root.isMuted ? theme.red : theme.accent
+                        ctx.lineWidth = 2
+                        ctx.lineCap = "round"
+                        ctx.beginPath()
+                        let start = -Math.PI / 2
+                        ctx.arc(cx, cy, r, start, start + Math.PI * 2 * audioBtn.ringValue)
+                        ctx.stroke()
+                    }
+                }
+                Connections {
+                    target: audioBtn
+                    function onRingValueChanged() { audioRing.requestPaint() }
+                }
+            }
+
+            RippleEffect {
+                id: audioRipple
+                anchors.fill: parent
+                clip: true
+                rippleColor: theme.accentGlow
             }
 
             Column {
                 anchors.centerIn: parent
                 spacing: 2
+                scale: audioBtn.iconScale
+                Behavior on scale {
+                    NumberAnimation { duration: theme.durMed; easing.type: Easing.OutBack }
+                }
 
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -318,8 +453,9 @@ Rectangle {
                         return "󰕿"
                     }
                     font.family: theme.fontMono
-                    font.pixelSize: 15
+                    font.pixelSize: 16
                     color: root.isMuted ? theme.red : theme.accent
+                    Behavior on color { ColorAnimation { duration: theme.durFast } }
                 }
 
                 Text {
@@ -332,6 +468,26 @@ Rectangle {
                 }
             }
 
+            Connections {
+                target: root
+                function onVolumeChanged() {
+                    audioBtn.iconScale = 1.12
+                    audioBounceAnim.restart()
+                }
+                function onIsMutedChanged() {
+                    audioBtn.iconScale = 1.12
+                    audioBounceAnim.restart()
+                }
+            }
+            NumberAnimation {
+                id: audioBounceAnim
+                target: audioBtn
+                property: "iconScale"
+                to: 1.0
+                duration: 250
+                easing.type: Easing.OutBack
+            }
+
             MouseArea {
                 id: audioMouse
                 anchors.fill: parent
@@ -341,42 +497,105 @@ Rectangle {
                     if (wheel.angleDelta.y > 0) root.stepVolume("5%+")
                     else root.stepVolume("5%-")
                 }
-                onClicked: root.toggleMute()
+                onClicked: {
+                    audioRipple.trigger(audioMouse)
+                    root.toggleMute()
+                }
             }
         }
 
         // Divider
         Rectangle {
-            width: 18
+            width: 22
             height: 1
-            color: theme.bg
+            color: theme.borderHover
             anchors.horizontalCenter: parent.horizontalCenter
             opacity: 0.8
         }
 
         // 3. Pin & Power Profile
         Item {
-            width: 32
-            height: 34
+            id: batBtn
+            width: 34
+            height: 36
             anchors.horizontalCenter: parent.horizontalCenter
+
+            property real iconScale: 1.0
+            property real ringValue: root.batteryPct / 100
 
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
                 color: theme.bgHover
                 opacity: batMouse.containsMouse ? 0.8 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 150 } }
+                Behavior on opacity { NumberAnimation { duration: theme.durFast } }
+            }
+
+            // Glow đỏ pulse khi pin yếu
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: theme.glowRed
+                visible: root.lowBattery
+                SequentialAnimation on opacity {
+                    running: root.lowBattery
+                    loops: Animation.Infinite
+                    NumberAnimation { from: 0.3; to: 0.7; duration: 900; easing.type: Easing.InOutSine }
+                    NumberAnimation { from: 0.7; to: 0.3; duration: 900; easing.type: Easing.InOutSine }
+                }
+            }
+
+            Canvas {
+                id: batRing
+                anchors.fill: parent
+                opacity: batMouse.containsMouse ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 200 } }
+
+                onPaint: {
+                    let ctx = getContext("2d")
+                    ctx.reset()
+                    let cx = width / 2, cy = height / 2, r = Math.min(width, height) / 2 - 2
+                    ctx.strokeStyle = theme.border
+                    ctx.lineWidth = 2
+                    ctx.beginPath()
+                    ctx.arc(cx, cy, r, 0, Math.PI * 2)
+                    ctx.stroke()
+                    if (batBtn.ringValue > 0) {
+                        ctx.strokeStyle = root.isCharging ? theme.green : (root.batteryPct > 20 ? root.getProfileColor() : theme.red)
+                        ctx.lineWidth = 2
+                        ctx.lineCap = "round"
+                        ctx.beginPath()
+                        let start = -Math.PI / 2
+                        ctx.arc(cx, cy, r, start, start + Math.PI * 2 * batBtn.ringValue)
+                        ctx.stroke()
+                    }
+                }
+                Connections {
+                    target: batBtn
+                    function onRingValueChanged() { batRing.requestPaint() }
+                }
+            }
+
+            RippleEffect {
+                id: batRipple
+                anchors.fill: parent
+                clip: true
+                rippleColor: theme.accentGlow
             }
 
             Column {
                 anchors.centerIn: parent
                 spacing: 2
+                scale: batBtn.iconScale
+                Behavior on scale {
+                    NumberAnimation { duration: theme.durMed; easing.type: Easing.OutBack }
+                }
 
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: root.getProfileIcon()
                     font.family: theme.fontMono
-                    font.pixelSize: 15
+                    font.pixelSize: 16
                     color: root.getProfileColor()
 
                     Behavior on color { ColorAnimation { duration: 200 } }
@@ -392,12 +611,35 @@ Rectangle {
                 }
             }
 
+            Connections {
+                target: root
+                function onBatteryPctChanged() {
+                    batBtn.iconScale = 1.12
+                    batBounceAnim.restart()
+                }
+                function onCurrentProfileChanged() {
+                    batBtn.iconScale = 1.12
+                    batBounceAnim.restart()
+                }
+            }
+            NumberAnimation {
+                id: batBounceAnim
+                target: batBtn
+                property: "iconScale"
+                to: 1.0
+                duration: 250
+                easing.type: Easing.OutBack
+            }
+
             MouseArea {
                 id: batMouse
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root.cycleProfile()
+                onClicked: {
+                    batRipple.trigger(batMouse)
+                    root.cycleProfile()
+                }
             }
         }
     }

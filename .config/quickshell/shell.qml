@@ -51,10 +51,21 @@ ShellRoot {
             bottom: true
             left: true
         }
-        implicitWidth: 50
-        color: theme.bg
+        implicitWidth: 54
+        color: "transparent"
+
+        // Nền bar: gradient dọc tinh tế bgDark -> bg
+        Rectangle {
+            anchors.fill: parent
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: theme.bgDark }
+                GradientStop { position: 0.5; color: theme.bg }
+                GradientStop { position: 1.0; color: theme.bgDark }
+            }
+        }
 
         // Subtle divider separating the vertical bar from desktop windows
+        // Viền mờ dần ở 2 đầu (gradient alpha) để mềm mại hơn.
         Rectangle {
             anchors {
                 top: parent.top
@@ -62,19 +73,24 @@ ShellRoot {
                 right: parent.right
             }
             width: 1
-            color: theme.border
             z: 10
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: "transparent" }
+                GradientStop { position: 0.15; color: theme.borderHover }
+                GradientStop { position: 0.85; color: theme.borderHover }
+                GradientStop { position: 1.0; color: "transparent" }
+            }
         }
 
         ColumnLayout {
             anchors {
                 fill: parent
-                topMargin: 10
-                bottomMargin: 10
-                leftMargin: 5
-                rightMargin: 5
+                topMargin: 12
+                bottomMargin: 12
+                leftMargin: 6
+                rightMargin: 6
             }
-            spacing: 8
+            spacing: 10
 
             // 1. Module trên cùng: Giờ & Ngày
             ClockModule {

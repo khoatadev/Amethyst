@@ -13,7 +13,7 @@
 | **Terminal** | [kitty](https://sw.kovidgoyal.net/kitty/) | Terminal GPU-accelerated với font ligatures |
 | **App Launcher** | [Quickshell](https://quickshell.outfoxxed.me/) | Dynamic Island mép dưới màn hình, hiệu ứng co dãn vệt trượt Kitty Cursor Trail |
 | **File Manager** | [yazi](https://github.com/sxyazi/yazi) | Trình quản lý file TUI siêu tốc |
-| **Status Bar** | [Quickshell](https://quickshell.outfoxxed.me/) | Thanh trạng thái QML hiện đại, mượt mà |
+| **Status Bar** | [Quickshell](https://quickshell.outfoxxed.me/) | Thanh trạng thái QML dọc mượt mà với hiệu ứng động (ripple, glow, bounce, ring indicator) |
 | **Bảng màu (Palette)**| **Tokyo Night Moon** | Tông màu đêm dịu mắt, huyền bí |
 | **Font chữ** | `ComicShannsMono Nerd Font` | Font lập trình cá tính, hỗ trợ đầy đủ Nerd Font icons |
 
@@ -26,7 +26,7 @@
 | **mangoWC** | `.config/mango/` | ✅ Hoàn thành | Quản lý cửa sổ, hiệu ứng chuyển động, gaps, keybinds, autostart & remap Caps Lock sang Escape |
 | **kitty** | `.config/kitty/` | ✅ Hoàn thành | Theme Tokyo Night Moon, background opacity 0.90 |
 | **rofi** | `.config/rofi/` | 📦 Dự phòng | Cấu hình Rofi dự phòng (đã thay thế chính bằng Quickshell Launcher) |
-| **quickshell** | `.config/quickshell/` | ✅ Hoàn thành | Thanh trạng thái dọc & Dynamic Island Launcher mép dưới với hiệu ứng Kitty Cursor Trail |
+| **quickshell** | `.config/quickshell/` | ✅ Hoàn thành | Thanh dọc trái 54px (nền gradient, viền mờ dần), Clock capsule, Workspaces với indicator stretch + glow + bounce + ripple, Controls với ring tiến độ khi hover, glow đỏ pulse khi mute/pin yếu, Dynamic Island Launcher mép dưới |
 | **GTK / Qt** | `.config/` | ⏳ Đang làm | Đồng bộ theme ứng dụng đồ họa |
 | **Wallpaper** | `assets/wallpapers/` | ⏳ Đang làm | Hình nền đồng bộ bảng màu |
 

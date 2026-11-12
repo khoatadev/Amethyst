@@ -48,7 +48,7 @@ Item {
     // Nền tối gộp chung hình viên thuốc (Capsule / Pill bo tròn hoàn hảo)
     Rectangle {
         id: capsule
-        width: 38
+        width: 42
         anchors.horizontalCenter: parent.horizontalCenter
 
         readonly property int padding: 3
@@ -58,6 +58,8 @@ Item {
         height: padding * 2 + root.visibleTags.length * itemSize + Math.max(0, root.visibleTags.length - 1) * spacing
         radius: width / 2
         color: theme.bgDark
+        border.width: 1
+        border.color: theme.border
 
         Behavior on height {
             NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
@@ -98,12 +100,24 @@ Item {
             y: topY
             height: Math.max(capsule.itemSize, bottomY - topY)
 
+            // Glow mềm phía sau indicator
+            Rectangle {
+                anchors.centerIn: parent
+                width: parent.width + 12
+                height: parent.height + 12
+                radius: width / 2
+                color: theme.accentGlow
+                opacity: 0.6
+            }
+
             // Khối màu viên thuốc co giãn đàn hồi
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
                 color: theme.accent
                 opacity: 0.95
+                border.width: 1
+                border.color: theme.borderActive
             }
         }
 
@@ -132,11 +146,26 @@ Item {
                         color: theme.bgHover
                         opacity: (mouseArea.containsMouse && !tagItem.isActive) ? 0.8 : 0.0
                         Behavior on opacity {
-                            NumberAnimation { duration: 150 }
+                            NumberAnimation { duration: theme.durFast }
                         }
                     }
 
+                    // Scale khi hover
+                    scale: (mouseArea.containsMouse && !tagItem.isActive) ? 1.06 : 1.0
+                    Behavior on scale {
+                        NumberAnimation { duration: theme.durFast; easing.type: Easing.OutCubic }
+                    }
+
+                    // Ripple khi click
+                    RippleEffect {
+                        id: ripple
+                        anchors.fill: parent
+                        clip: true
+                        rippleColor: theme.accentGlow
+                    }
+
                     Text {
+                        id: numText
                         anchors.centerIn: parent
                         text: modelData.index.toString()
                         font.family: theme.fontMono
@@ -147,6 +176,40 @@ Item {
                         Behavior on color {
                             ColorAnimation { duration: 180 }
                         }
+
+                        // Bounce khi chuyển sang active
+                        scale: 1.0
+                        Connections {
+                            target: tagItem
+                            function onIsActiveChanged() {
+                                if (tagItem.isActive) {
+                                    numText.scale = 1.15
+                                    bounceAnim.restart()
+                                }
+                            }
+                        }
+
+                        NumberAnimation {
+                            id: bounceAnim
+                            target: numText
+                            property: "scale"
+                            to: 1.0
+                            duration: 300
+                            easing.type: Easing.OutBack
+                        }
+                    }
+
+                    // Chấm tròn báo hiệu workspace có client
+                    Rectangle {
+                        visible: tagItem.hasClients
+                        width: 3
+                        height: 3
+                        radius: 1.5
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 3
+                        color: tagItem.isActive ? theme.bgDark : theme.fgMuted
+                        opacity: 0.85
                     }
 
                     MouseArea {
@@ -155,6 +218,7 @@ Item {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
+                            ripple.trigger(mouseArea)
                             tagDispatcher.exec(["mmsg", "dispatch", "view," + modelData.index + ",0"])
                         }
                     }
