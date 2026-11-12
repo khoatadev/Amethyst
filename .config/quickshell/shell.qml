@@ -16,6 +16,12 @@ ShellRoot {
         theme: theme
     }
 
+    // Menu chọn wallpaper (island gallery + transition awww)
+    WallpaperMenu {
+        id: wallpaperMenu
+        theme: theme
+    }
+
     // Handler IPC lắng nghe tín hiệu gọi từ phím tắt mangoWC hoặc script
     IpcHandler {
         target: "launcher"
@@ -30,6 +36,23 @@ ShellRoot {
 
         function close() {
             appLauncher.close();
+        }
+    }
+
+    // Handler IPC cho menu wallpaper (gọi từ phím tắt SUPER+W)
+    IpcHandler {
+        target: "wallpaper"
+
+        function toggle() {
+            wallpaperMenu.toggle();
+        }
+
+        function open() {
+            wallpaperMenu.open();
+        }
+
+        function close() {
+            wallpaperMenu.close();
         }
     }
 

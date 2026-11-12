@@ -13,6 +13,9 @@
 "SUPER+d" = "spawn,quickshell ipc call launcher toggle"
 "SUPER+t" = "spawn,kitty"
 
+# Menu chọn wallpaper (island gallery của quickshell + awww transition)
+"SUPER+w" = "spawn,quickshell ipc call wallpaper toggle"
+
 # File manager
 "SUPER+e" = "spawn,kitty yazi"
 

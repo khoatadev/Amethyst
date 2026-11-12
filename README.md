@@ -26,9 +26,9 @@
 | **mangoWC** | `.config/mango/` | ✅ Hoàn thành | Quản lý cửa sổ, hiệu ứng chuyển động, gaps, keybinds, autostart & remap Caps Lock sang Escape |
 | **kitty** | `.config/kitty/` | ✅ Hoàn thành | Theme Tokyo Night Moon, background opacity 0.90 |
 | **rofi** | `.config/rofi/` | 📦 Dự phòng | Cấu hình Rofi dự phòng (đã thay thế chính bằng Quickshell Launcher) |
-| **quickshell** | `.config/quickshell/` | ✅ Hoàn thành | Thanh dọc trái 54px (nền gradient, viền mờ dần), Clock capsule, Workspaces với indicator stretch + glow + bounce + ripple, Controls với ring tiến độ khi hover, glow đỏ pulse khi mute/pin yếu, Dynamic Island Launcher mép dưới, Cava underbar (thanh chữ nhật bo tròn, decay attack/release nảy mạnh, peak caps rơi theo trọng lực, mirror reflection + glow + sàn sáng theo năng lượng) |
+| **quickshell** | `.config/quickshell/` | ✅ Hoàn thành | Thanh dọc trái 54px (nền gradient, viền mờ dần), Clock capsule, Workspaces với indicator stretch + glow + bounce + ripple, Controls với ring tiến độ khi hover, glow đỏ pulse khi mute/pin yếu, Dynamic Island Launcher mép dưới, Cava underbar (thanh chữ nhật bo tròn, decay attack/release nảy mạnh, peak caps rơi theo trọng lực, mirror reflection + glow + sàn sáng theo năng lượng), Wallpaper Island (gallery thumbnail bay vào staggered, hover glow accent, chấm xanh pulse đánh dấu wallpaper hiện tại, chọn xong thumbnail phóng tràn màn hình đúng nhịp awww transition ngẫu nhiên) |
 | **GTK / Qt** | `.config/` | ⏳ Đang làm | Đồng bộ theme ứng dụng đồ họa |
-| **Wallpaper** | `assets/wallpapers/` | ⏳ Đang làm | Hình nền đồng bộ bảng màu |
+| **Wallpaper** | `~/Pictures/Wallpapers/` (ngoài repo) | ✅ Hoàn thành | Quản lý qua Wallpaper Island `Super+W`; daemon `awww` với transition ngẫu nhiên (grow/wave/wipe/fade) |
 
 ---
 
@@ -39,6 +39,7 @@ Các phím tắt chính được cấu hình trong compositor mangoWC (`Mod = Su
 | Phím tắt | Tác vụ |
 | :--- | :--- |
 | `Super + D` | Mở App Launcher (**Quickshell Launcher**) |
+| `Super + W` | Mở **Wallpaper Island** (menu chọn wallpaper + hiệu ứng transition awww) |
 | `Super + T` | Mở Terminal (**Kitty**) |
 | `Super + E` | Mở File Manager (**Yazi** trong Kitty) |
 | `Super + Z` | Mở trình duyệt web (**Zen Browser**) |
