@@ -22,6 +22,12 @@ ShellRoot {
         theme: theme
     }
 
+    // Menu chọn wifi (island mọc từ mép bar trái, quét qua NetworkManager)
+    WifiMenu {
+        id: wifiMenu
+        theme: theme
+    }
+
     // Handler IPC lắng nghe tín hiệu gọi từ phím tắt mangoWC hoặc script
     IpcHandler {
         target: "launcher"
@@ -53,6 +59,23 @@ ShellRoot {
 
         function close() {
             wallpaperMenu.close();
+        }
+    }
+
+    // Handler IPC cho menu wifi (gọi từ phím tắt mangoWC hoặc script)
+    IpcHandler {
+        target: "wifi"
+
+        function toggle() {
+            wifiMenu.toggle();
+        }
+
+        function open() {
+            wifiMenu.open();
+        }
+
+        function close() {
+            wifiMenu.close();
         }
     }
 
@@ -131,9 +154,12 @@ ShellRoot {
                 Layout.fillHeight: true
             }
 
-            // 3. Cụm điều khiển hệ thống gộp chung (Độ sáng, Âm thanh, Pin & Power Profile)
+            // 3. Cụm điều khiển hệ thống gộp chung (Wifi, Độ sáng, Âm thanh, Pin & Power Profile)
             ControlsCapsule {
                 Layout.alignment: Qt.AlignHCenter
+
+                // Click nút wifi trên capsule → mở menu wifi
+                onWifiClicked: wifiMenu.open()
             }
         }
     }

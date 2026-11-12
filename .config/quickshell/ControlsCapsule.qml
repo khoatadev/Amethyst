@@ -2,11 +2,15 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.UPower
+import Quickshell.Networking
 
 Rectangle {
     id: root
 
     Theme { id: theme }
+
+    // Click nút wifi trên capsule → shell.qml bắt signal này để mở WifiMenu
+    signal wifiClicked()
 
     width: 42
     height: col.implicitHeight + 16
@@ -14,6 +18,41 @@ Rectangle {
     color: theme.bgDark
     border.width: 1
     border.color: theme.border
+
+    // -------------------------------------------------------------
+    // Wifi Logic — trạng thái wifi qua Quickshell.Networking (NM)
+    // -------------------------------------------------------------
+    property var wifiDevice: {
+        let devs = Networking.devices.values;
+        for (let i = 0; i < devs.length; i++) {
+            if (devs[i] && devs[i].type === DeviceType.Wifi) return devs[i];
+        }
+        return null;
+    }
+
+    // Mạng đang kết nối (để hiện tên/mức sóng trên nút)
+    readonly property var currentNetwork: {
+        if (!wifiDevice || !wifiDevice.networks) return null;
+        let nets = wifiDevice.networks.values;
+        for (let i = 0; i < nets.length; i++) {
+            if (nets[i] && nets[i].connected) return nets[i];
+        }
+        return null;
+    }
+
+    // Cường độ sóng hiện tại (0 nếu không kết nối)
+    readonly property int wifiSignal: currentNetwork ? Math.round(currentNetwork.signalStrength) : 0
+
+    // Icon sóng theo mức tín hiệu (Nerd Font)
+    function wifiIcon() {
+        if (Networking.wifiEnabled === false) return "󰤭";
+        if (!currentNetwork) return "󰤭";
+        if (wifiSignal >= 80) return "󰤨";
+        if (wifiSignal >= 60) return "󰤥";
+        if (wifiSignal >= 40) return "󰤢";
+        if (wifiSignal >= 20) return "󰤟";
+        return "󰤯";
+    }
 
     // -------------------------------------------------------------
     // Brightness Logic
@@ -240,6 +279,134 @@ Rectangle {
         id: col
         anchors.centerIn: parent
         spacing: 4
+
+        // 0. Wifi — mọc lên trên cụm brightness, click mở WifiMenu
+        Item {
+            id: wifiBtn
+            width: 34
+            height: 36
+            anchors.horizontalCenter: parent.horizontalCenter
+
+            property real iconScale: 1.0
+            property color ringColor: theme.accent
+            property real ringValue: root.wifiSignal / 100
+
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: theme.bgHover
+                opacity: wifiMouse.containsMouse ? 0.8 : 0.0
+                Behavior on opacity { NumberAnimation { duration: theme.durFast } }
+            }
+
+            // Vòng cung tín hiệu sóng (hiện khi hover)
+            Canvas {
+                id: wifiRing
+                anchors.fill: parent
+                opacity: wifiMouse.containsMouse ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 200 } }
+
+                onPaint: {
+                    let ctx = getContext("2d")
+                    ctx.reset()
+                    let cx = width / 2, cy = height / 2, r = Math.min(width, height) / 2 - 2
+                    ctx.strokeStyle = theme.border
+                    ctx.lineWidth = 2
+                    ctx.beginPath()
+                    ctx.arc(cx, cy, r, 0, Math.PI * 2)
+                    ctx.stroke()
+                    if (wifiBtn.ringValue > 0) {
+                        ctx.strokeStyle = wifiBtn.ringColor
+                        ctx.lineWidth = 2
+                        ctx.lineCap = "round"
+                        ctx.beginPath()
+                        let start = -Math.PI / 2
+                        ctx.arc(cx, cy, r, start, start + Math.PI * 2 * wifiBtn.ringValue)
+                        ctx.stroke()
+                    }
+                }
+                Connections {
+                    target: wifiBtn
+                    function onRingValueChanged() { wifiRing.requestPaint() }
+                }
+            }
+
+            // Ripple khi click
+            RippleEffect {
+                id: wifiRipple
+                anchors.fill: parent
+                clip: true
+                rippleColor: theme.accentGlow
+            }
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 2
+                scale: wifiBtn.iconScale
+                Behavior on scale {
+                    NumberAnimation { duration: theme.durMed; easing.type: Easing.OutBack }
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: root.wifiIcon()
+                    font.family: theme.fontMono
+                    font.pixelSize: 16
+                    color: root.currentNetwork ? theme.accent : theme.fgMuted
+                    Behavior on color { ColorAnimation { duration: theme.durFast } }
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: root.currentNetwork ? root.wifiSignal + "%" : "off"
+                    font.family: theme.fontMono
+                    font.pixelSize: 9
+                    font.bold: true
+                    color: root.currentNetwork ? theme.fg : theme.fgSubtle
+                }
+            }
+
+            // Bounce khi mức sóng / trạng thái đổi
+            Connections {
+                target: root
+                function onWifiSignalChanged() {
+                    wifiBtn.iconScale = 1.12
+                    wifiBounceAnim.restart()
+                }
+                function onCurrentNetworkChanged() {
+                    wifiBtn.iconScale = 1.12
+                    wifiBounceAnim.restart()
+                }
+            }
+            NumberAnimation {
+                id: wifiBounceAnim
+                target: wifiBtn
+                property: "iconScale"
+                to: 1.0
+                duration: 250
+                easing.type: Easing.OutBack
+            }
+
+            MouseArea {
+                id: wifiMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    wifiRipple.trigger(wifiMouse)
+                    root.wifiClicked()
+                }
+            }
+        }
+
+        // Divider
+        Rectangle {
+            width: 22
+            height: 1
+            color: theme.borderHover
+            anchors.horizontalCenter: parent.horizontalCenter
+            opacity: 0.8
+        }
 
         // 1. Độ sáng (Brightness)
         Item {

@@ -1,0 +1,548 @@
+import QtQuick
+import QtQuick.Effects
+import QtQuick.Shapes
+import QtQuick.Controls
+import Quickshell
+import Quickshell.Wayland
+import Quickshell.Io
+import Quickshell.Networking
+
+// =============================================================================
+// Wifi Menu — "Wifi Island" mọc ra từ mép trái màn hình, ngang cụm Controls
+// - Đồng bộ aesthetic với WallpaperMenu/AppLauncher: đảo đen bo hai góc phải
+//   (góc nối với mép bar), góc lõm nối mép trái, spring nảy nhẹ khi mở
+// - Danh sách mạng quét live qua Quickshell.Networking (NetworkManager):
+//   icon sóng theo cường độ, khóa cho mạng có mật khẩu, chấm xanh pulse +
+//   nút ngắt kết nối cho mạng đang dùng
+// - Mạng đã lưu (known) kết nối 1 click; mạng lạ có mật khẩu mở ô nhập
+//   password ngay dưới dòng đó — Enter để connectWithPsk()
+// - Pill bật/tắt wifi ở header (Networking.wifiEnabled)
+// =============================================================================
+
+PanelWindow {
+    id: root
+
+    property var theme
+    property bool isOpen: false
+
+    // ---- Thông số giao diện ----
+    readonly property int openHeight: 520
+    readonly property int closedHeight: 130
+    readonly property int headerHeight: 48
+    readonly property int rowHeight: 44
+    readonly property int maxRows: 9
+    readonly property int listPadding: 8
+    readonly property int menuWidth: 380
+    readonly property int cornerRadius: 24     // bo hai góc phải
+    readonly property int filletRadius: 14     // góc lõm nối với mép bar
+    readonly property color islandColor: "#000000"
+    readonly property string fontFamily: theme ? theme.fontMono : "ComicShannsMono Nerd Font"
+
+    // ---- Kích thước đảo hiện tại (được animate) ----
+    property real islandW: 0
+    property real islandH: closedHeight
+
+    readonly property real listTargetHeight: {
+        if (!wifiDevice || !wifiDevice.networks) return 48;
+        let n = sortedNetworks.length;
+        if (n === 0) return 48;
+        return Math.min(n, maxRows) * rowHeight + listPadding * 2;
+    }
+    readonly property real targetH: isOpen ? Math.min(openHeight, headerHeight + listTargetHeight + 10) : closedHeight
+    readonly property real targetW: isOpen ? menuWidth : 0
+
+    onTargetHChanged: islandH = targetH
+    onTargetWChanged: islandW = targetW
+
+    // Spring nảy nhẹ khi phình ra, co gọn mượt khi đóng
+    Behavior on islandH {
+        NumberAnimation {
+            duration: root.isOpen ? 520 : 300
+            easing.type: root.isOpen ? Easing.OutBack : Easing.InOutCubic
+            easing.overshoot: 1.1
+        }
+    }
+    Behavior on islandW {
+        NumberAnimation {
+            duration: root.isOpen ? 560 : 320
+            easing.type: root.isOpen ? Easing.OutBack : Easing.InOutCubic
+            easing.overshoot: 0.6
+        }
+    }
+
+    visible: isOpen || islandW > 0.5
+    color: "transparent"
+
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: isOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.namespace: "wifimenu"
+    exclusionMode: ExclusionMode.Ignore
+
+    // Đảo mọc từ mép trái, dọc theo bar — neo top/bottom full rồi căn giữa
+    anchors { top: true; bottom: true; left: true }
+    implicitHeight: 1000
+
+    // =========================================================================
+    // Dữ liệu wifi qua Quickshell.Networking (NetworkManager backend)
+    // =========================================================================
+
+    // Lấy thiết bị wifi đầu tiên từ Networking.devices
+    readonly property var wifiDevice: {
+        let devs = Networking.devices.values;
+        for (let i = 0; i < devs.length; i++) {
+            if (devs[i] && devs[i].type === DeviceType.Wifi) return devs[i];
+        }
+        return null;
+    }
+
+    // Bật scanner khi menu mở để quét live (tắt khi đóng để tiết kiệm pin)
+    onIsOpenChanged: {
+        if (wifiDevice) wifiDevice.scannerEnabled = isOpen;
+        if (isOpen) {
+            refreshNetworks();
+            Qt.callLater(() => keyHandler.forceActiveFocus());
+        }
+    }
+
+    // Sắp xếp: đang kết nối lên đầu, rồi theo tín hiệu giảm dần
+    property var sortedNetworks: []
+
+    function refreshNetworks() {
+        if (!wifiDevice || !wifiDevice.networks) {
+            sortedNetworks = [];
+            return;
+        }
+        let nets = wifiDevice.networks.values.slice();
+        nets.sort((a, b) => {
+            if (a.connected !== b.connected) return a.connected ? -1 : 1;
+            return b.signalStrength - a.signalStrength;
+        });
+        sortedNetworks = nets;
+    }
+
+    // Cập nhật lại khi danh sách mạng hoặc trạng thái kết nối thay đổi
+    Connections {
+        target: wifiDevice ? wifiDevice.networks : null
+        function onValuesChanged() { refreshNetworks(); }
+    }
+    Connections {
+        target: wifiDevice
+        function onConnectedChanged() { refreshNetworks(); }
+    }
+
+    Component.onCompleted: refreshNetworks()
+
+    // Mạng đang chờ nhập password (object WifiNetwork)
+    property var pendingNetwork: null
+    // Password đang gõ (bind 2 chiều với ô nhập trong delegate)
+    property string pendingPassword: ""
+
+    // Đóng menu khi click ra ngoài
+    MouseArea {
+        anchors.fill: parent
+        onClicked: root.close()
+    }
+
+    // =========================================================================
+    // Kết nối / ngắt kết nối
+    // =========================================================================
+
+    function requestConnect(net) {
+        if (net.known || net.security === WifiSecurityType.Open) {
+            net.connect();
+        } else {
+            // Mạng lạ có mật khẩu → mở ô nhập password
+            pendingNetwork = net;
+        }
+    }
+
+    function submitPassword() {
+        if (pendingNetwork && pendingPassword.length > 0) {
+            pendingNetwork.connectWithPsk(pendingPassword);
+        }
+        pendingNetwork = null;
+        pendingPassword = "";
+    }
+
+    function cancelPassword() {
+        pendingNetwork = null;
+        pendingPassword = "";
+    }
+
+    function open() {
+        isOpen = true;
+    }
+
+    function close() {
+        isOpen = false;
+        cancelPassword();
+    }
+
+    function toggle() {
+        isOpen ? close() : open();
+    }
+
+    // =========================================================================
+    // Icon sóng theo cường độ tín hiệu (Nerd Font)
+    // =========================================================================
+    function signalIcon(strength) {
+        if (strength >= 80) return "󰤨";
+        if (strength >= 60) return "󰤥";
+        if (strength >= 40) return "󰤢";
+        if (strength >= 20) return "󰤟";
+        return "󰤯";
+    }
+
+    // =========================================================================
+    // Đảo (Island) mọc từ mép trái màn hình, giữa chiều cao
+    // =========================================================================
+    Item {
+        id: islandRoot
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.left: parent.left
+        width: Math.max(0, root.islandW)
+        height: Math.max(0, root.islandH)
+
+        // Bóng đổ mềm phía phải đảo
+        RectangularShadow {
+            anchors.fill: island
+            anchors.leftMargin: root.cornerRadius
+            radius: root.cornerRadius
+            offset.x: 8
+            blur: 36
+            color: Qt.rgba(0, 0, 0, 0.45)
+            opacity: Math.min(1, root.islandW / 40)
+        }
+
+        // Thân đảo: kéo dài sang trái thêm cornerRadius để hai góc trái
+        // bị giấu sau bar, chỉ còn hai góc phải được bo tròn
+        Rectangle {
+            id: island
+            x: -root.cornerRadius
+            y: 0
+            width: parent.width + root.cornerRadius
+            height: parent.height
+            radius: Math.min(root.cornerRadius, (parent.width + root.cornerRadius) / 2)
+            color: root.islandColor
+
+            MouseArea { anchors.fill: parent }
+        }
+
+        // Góc lõm trên: nối mềm thân đảo với mép bar
+        Shape {
+            id: filletTop
+            readonly property real r: Math.min(root.filletRadius, root.islandW)
+            visible: r > 0.5
+            x: 0
+            y: -r
+            width: r; height: r
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                strokeWidth: 0
+                strokeColor: "transparent"
+                fillColor: root.islandColor
+                startX: filletTop.r; startY: 0
+                PathLine { x: filletTop.r; y: filletTop.r }
+                PathLine { x: 0; y: filletTop.r }
+                PathArc {
+                    x: filletTop.r; y: 0
+                    radiusX: filletTop.r; radiusY: filletTop.r
+                    direction: PathArc.Clockwise
+                }
+            }
+        }
+
+        // Góc lõm dưới: nối mềm thân đảo với mép bar
+        Shape {
+            id: filletBottom
+            readonly property real r: Math.min(root.filletRadius, root.islandW)
+            visible: r > 0.5
+            x: 0
+            y: islandRoot.height
+            width: r; height: r
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                strokeWidth: 0
+                strokeColor: "transparent"
+                fillColor: root.islandColor
+                startX: 0; startY: 0
+                PathLine { x: filletBottom.r; y: 0 }
+                PathLine { x: filletBottom.r; y: filletBottom.r }
+                PathArc {
+                    x: 0; y: 0
+                    radiusX: filletBottom.r; radiusY: filletBottom.r
+                    direction: PathArc.Clockwise
+                }
+            }
+        }
+
+        // ---------------- Nội dung đảo ----------------
+        Item {
+            id: content
+            anchors.fill: parent
+            clip: true
+            opacity: Math.max(0, Math.min(1, (root.islandW - 100) / 160))
+                     * Math.max(0, Math.min(1, (root.islandH - 60) / 40))
+
+            // ---------- Header: tiêu đề + pill bật/tắt wifi ----------
+            Item {
+                id: header
+                anchors.top: parent.top
+                anchors.topMargin: 12
+                width: parent.width
+                height: root.headerHeight
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 22
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "󰤨  wi-fi"
+                    font.family: root.fontFamily
+                    font.pixelSize: 14
+                    color: Qt.rgba(1, 1, 1, 0.9)
+                }
+
+                // Pill bật/tắt wifi (Networking.wifiEnabled)
+                Rectangle {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 22
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: pillText.implicitWidth + 34
+                    height: 28
+                    radius: 14
+                    color: Networking.wifiEnabled
+                           ? Qt.rgba(1, 1, 1, 0.10)
+                           : Qt.rgba(1, 1, 1, 0.04)
+                    border.width: 1
+                    border.color: Networking.wifiEnabled
+                                   ? (root.theme ? root.theme.borderActive : "#82aaff")
+                                   : Qt.rgba(1, 1, 1, 0.12)
+
+                    // Chấm trạng thái
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 8; height: 8
+                        radius: 4
+                        color: Networking.wifiEnabled
+                               ? (root.theme ? root.theme.green : "#c3e88d")
+                               : Qt.rgba(1, 1, 1, 0.3)
+                    }
+
+                    Text {
+                        id: pillText
+                        anchors.left: parent.left
+                        anchors.leftMargin: 24
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Networking.wifiEnabled ? "on" : "off"
+                        font.family: root.fontFamily
+                        font.pixelSize: 12
+                        color: Networking.wifiEnabled ? Qt.rgba(1, 1, 1, 0.7) : Qt.rgba(1, 1, 1, 0.4)
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Networking.wifiEnabled = !Networking.wifiEnabled
+                    }
+                }
+            }
+
+            // ---------- Danh sách mạng ----------
+            ListView {
+                id: networkList
+                anchors.top: header.bottom
+                anchors.topMargin: 4
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 14
+                anchors.rightMargin: 14
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 10
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                spacing: 2
+                implicitHeight: contentHeight
+                model: root.sortedNetworks.length
+
+                ScrollBar.vertical: ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                }
+
+                delegate: Item {
+                    id: netRow
+                    required property int index
+                    readonly property var net: root.sortedNetworks[netRow.index] || null
+                    readonly property bool isCurrent: net ? net.connected : false
+                    readonly property bool isPending: net && root.pendingNetwork === net
+                    property bool hovered: false
+
+                    width: networkList.width
+                    height: root.rowHeight + (isPending ? 40 : 0)
+
+                    // Nền dòng: hover + đang kết nối
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 10
+                        color: netRow.isCurrent
+                               ? Qt.rgba(1, 1, 1, 0.08)
+                               : (netRow.hovered ? Qt.rgba(1, 1, 1, 0.05) : "transparent")
+                        border.width: 1
+                        border.color: netRow.isCurrent
+                                      ? (root.theme ? root.theme.borderActive : "#82aaff")
+                                      : "transparent"
+
+                        Behavior on color { ColorAnimation { duration: 120 } }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onHoveredChanged: netRow.hovered = hovered
+                        onClicked: {
+                            if (!netRow.net) return;
+                            if (netRow.isCurrent) {
+                                // Đang dùng → click lần nữa để ngắt
+                                netRow.net.disconnect();
+                            } else {
+                                root.requestConnect(netRow.net);
+                            }
+                        }
+                    }
+
+                    // Icon sóng theo cường độ
+                    Text {
+                        id: signalIcon
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: netRow.net ? root.signalIcon(netRow.net.signalStrength) : ""
+                        font.family: root.fontFamily
+                        font.pixelSize: 16
+                        color: netRow.isCurrent
+                               ? (root.theme ? root.theme.accent : "#82aaff")
+                               : Qt.rgba(1, 1, 1, 0.7)
+                    }
+
+                    // Tên mạng
+                    Text {
+                        anchors.left: signalIcon.right
+                        anchors.leftMargin: 12
+                        anchors.right: lockIcon.left
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: netRow.net ? netRow.net.name : ""
+                        font.family: root.fontFamily
+                        font.pixelSize: 13
+                        color: netRow.isCurrent ? Qt.rgba(1, 1, 1, 0.95) : Qt.rgba(1, 1, 1, 0.7)
+                        elide: Text.ElideRight
+                    }
+
+                    // Khóa cho mạng có mật khẩu
+                    Text {
+                        id: lockIcon
+                        anchors.right: parent.right
+                        anchors.rightMargin: netRow.isCurrent ? 40 : 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "󰌾"
+                        visible: netRow.net && netRow.net.security !== WifiSecurityType.Open
+                        font.family: root.fontFamily
+                        font.pixelSize: 12
+                        color: Qt.rgba(1, 1, 1, 0.35)
+                    }
+
+                    // Chấm xanh pulse: mạng đang dùng
+                    Rectangle {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 10; height: 10
+                        radius: 5
+                        visible: netRow.isCurrent
+                        color: root.theme ? root.theme.green : "#c3e88d"
+                        border.width: 2
+                        border.color: Qt.rgba(0, 0, 0, 0.4)
+
+                        SequentialAnimation on scale {
+                            running: netRow.isCurrent
+                            loops: Animation.Infinite
+                            NumberAnimation { from: 1; to: 1.35; duration: 900; easing.type: Easing.InOutSine }
+                            NumberAnimation { from: 1.35; to: 1; duration: 900; easing.type: Easing.InOutSine }
+                        }
+                    }
+
+                    // Ô nhập password cho mạng lạ (mở dưới dòng)
+                    Rectangle {
+                        id: passwordBox
+                        visible: netRow.isPending
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        anchors.top: signalIcon.bottom
+                        anchors.topMargin: 6
+                        height: 32
+                        radius: 8
+                        color: Qt.rgba(1, 1, 1, 0.06)
+                        border.width: 1
+                        border.color: root.theme ? root.theme.borderActive : "#82aaff"
+
+                        TextInput {
+                            id: passwordInput
+                            anchors.fill: parent
+                            anchors.margins: 8
+                            verticalAlignment: TextInput.AlignVCenter
+                            font.family: root.fontFamily
+                            font.pixelSize: 12
+                            color: Qt.rgba(1, 1, 1, 0.9)
+                            echoMode: TextInput.Password
+                            clip: true
+                            passwordCharacter: "•"
+                            text: root.pendingPassword
+                            onTextEdited: root.pendingPassword = text
+
+                            onAccepted: root.submitPassword()
+                            Keys.onEscapePressed: (event) => {
+                                root.cancelPassword();
+                                event.accepted = true;
+                            }
+
+                            // Tự focus khi ô password hiện ra
+                            onVisibleChanged: {
+                                if (visible) passwordInput.forceActiveFocus();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Dòng trống khi không có mạng / wifi tắt
+            Text {
+                anchors.centerIn: networkList
+                visible: root.sortedNetworks.length === 0
+                text: Networking.wifiEnabled ? "đang quét..." : "wifi đang tắt"
+                font.family: root.fontFamily
+                font.pixelSize: 12
+                color: Qt.rgba(1, 1, 1, 0.35)
+            }
+
+            // ---------- Bắt phím khi menu mở ----------
+            Item {
+                id: keyHandler
+                anchors.fill: parent
+                focus: false
+
+                Keys.onEscapePressed: (event) => {
+                    if (root.pendingNetwork) {
+                        root.cancelPassword();
+                    } else {
+                        root.close();
+                    }
+                    event.accepted = true;
+                }
+            }
+        }
+    }
+}
