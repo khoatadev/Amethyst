@@ -26,7 +26,7 @@
 | **mangoWC** | `.config/mango/` | ✅ Hoàn thành | Quản lý cửa sổ, hiệu ứng chuyển động, gaps, keybinds, autostart & remap Caps Lock sang Escape |
 | **kitty** | `.config/kitty/` | ✅ Hoàn thành | Theme Tokyo Night Moon, background opacity 0.90 |
 | **rofi** | `.config/rofi/` | 📦 Dự phòng | Cấu hình Rofi dự phòng (đã thay thế chính bằng Quickshell Launcher) |
-| **quickshell** | `.config/quickshell/` | ✅ Hoàn thành | Thanh dọc trái 54px (nền gradient, viền mờ dần), Clock capsule, Workspaces với indicator stretch + glow + bounce + ripple, Controls với ring tiến độ khi hover, glow đỏ pulse khi mute/pin yếu, Dynamic Island Launcher mép dưới |
+| **quickshell** | `.config/quickshell/` | ✅ Hoàn thành | Thanh dọc trái 54px (nền gradient, viền mờ dần), Clock capsule, Workspaces với indicator stretch + glow + bounce + ripple, Controls với ring tiến độ khi hover, glow đỏ pulse khi mute/pin yếu, Dynamic Island Launcher mép dưới, Cava underbar (thanh chữ nhật bo tròn, decay attack/release nảy mạnh, peak caps rơi theo trọng lực, mirror reflection + glow + sàn sáng theo năng lượng) |
 | **GTK / Qt** | `.config/` | ⏳ Đang làm | Đồng bộ theme ứng dụng đồ họa |
 | **Wallpaper** | `assets/wallpapers/` | ⏳ Đang làm | Hình nền đồng bộ bảng màu |
 
