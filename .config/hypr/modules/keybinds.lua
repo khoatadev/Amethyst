@@ -49,6 +49,7 @@ hl.bind("XF86MonBrightnessUp",  hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%+")
 hl.bind("XF86MonBrightnessDown",hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-"),                  { locked = true, repeating = true })
 
 -- F-key media shortcuts
+hl.bind("CTRL + F1", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),       { locked = true, repeating = true })
 hl.bind("ALT + F1", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("ALT + F2", hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
 hl.bind("ALT + F3", hl.dsp.exec_cmd("playerctl next"),       { locked = true })
